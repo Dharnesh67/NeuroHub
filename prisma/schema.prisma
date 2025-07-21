@@ -18,3 +18,18 @@ model Post {
 
     @@index([name])
 }
+
+
+
+model User {
+    id        String   @id @default(uuid())
+    email     String   @unique
+    name      String?
+    imageUrl  String?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    firstName String?
+    lastName String?
+    hashedPassword String?
+    Credits Int @default(100)
+}
