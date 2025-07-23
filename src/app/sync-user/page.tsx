@@ -1,6 +1,7 @@
 import React from 'react'
 import { auth,clerkClient } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation';
+import { db } from '@/server/db';
 const SyncUser = async () => {
     const { userId } = await auth();
     if (!userId) {
@@ -13,7 +14,7 @@ const SyncUser = async () => {
     }
     await db.user.upsert({
         where: {
-            email: User.emailAddresses[0]?.emailAddress,
+            email: User.emailAddresses[0]?.emailAddress || '',
         },
         update: {
             name: User.fullName,
@@ -23,7 +24,7 @@ const SyncUser = async () => {
         },
         create: {
             id: User.id,
-            email: User.emailAddresses[0]?.emailAddress,
+            email: User.emailAddresses[0]?.emailAddress || '',
             name: User.fullName,
             imageUrl: User.imageUrl,
             firstName: User.firstName,
@@ -32,3 +33,6 @@ const SyncUser = async () => {
     });
     return redirect('/dashboard');
 }
+
+
+export default SyncUser;    
