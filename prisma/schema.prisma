@@ -33,3 +33,14 @@ model User {
     hashedPassword String?
     Credits Int @default(100)
 }
+
+
+
+model Project{
+    id        String   @id @default(uuid())
+    name      String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    githubUrl   String 
+    deletedAt DateTime?
+}
