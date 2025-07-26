@@ -1,5 +1,7 @@
 # NeuroHub – AI Codebase Assistant
 
+https://dev.to/saminarp/today-i-learned-using-octokit-2bdm
+
 [![GitHub Repo](https://img.shields.io/badge/GitHub-NeuroHub-blue?logo=github)](https://github.com/Dharnesh67/NeuroHub)
 
 NeuroHub is an AI-powered platform designed for collaborative code understanding, smart meeting transcription, and seamless GitHub repository access. Built with the T3 Stack and enhanced by cutting-edge AI and cloud technologies, NeuroHub is trusted by 500+ developers to accelerate codebase comprehension and team productivity.

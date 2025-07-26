@@ -7,4 +7,13 @@ type Project ={
   deletedAt?: Date | null;
 }
 
-export type { Project };
+type ResponseType = {
+  commitHash: string;
+  commitMessage: string;
+  commitAuthorName: string;
+  commitDate: string;
+  commitAuthorAvatar: string;
+  Summary?: string;
+};
+
+export type { Project, ResponseType };
