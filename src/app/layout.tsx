@@ -10,6 +10,7 @@ import {
 import { type Metadata } from "next";
 import { Orbitron, Share_Tech_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "NeuroHub",
@@ -48,6 +49,10 @@ export default function RootLayout({
         >
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <TRPCReactProvider>{children}</TRPCReactProvider>
+            <Toaster
+              position="top-right"
+              richColors
+            />
           </ThemeProvider>
         </body>
       </html>

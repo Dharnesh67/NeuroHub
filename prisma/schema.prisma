@@ -32,6 +32,7 @@ model User {
     lastName String?
     hashedPassword String?
     Credits Int @default(100)
+    UsertoProject UsertoProject[]
 }
 
 
@@ -43,4 +44,19 @@ model Project{
     updatedAt DateTime @updatedAt
     githubUrl   String 
     deletedAt DateTime?
+    UsertoProject UsertoProject[]
+}
+
+
+model UsertoProject {
+    id        String   @id @default(uuid())
+    userId    String
+    projectId String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    user User @relation(fields: [userId], references: [id])
+    project Project @relation(fields: [projectId], references: [id])
+
+    @@unique([userId, projectId])
+
 }

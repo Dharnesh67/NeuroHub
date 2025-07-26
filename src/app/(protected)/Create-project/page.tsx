@@ -4,6 +4,9 @@ import { useForm } from "react-hook-form";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { api } from "@/trpc/react";
+import { toast } from "sonner";
+import useRefetch from "@/hooks/use-refetch";
 
 type FormInput = {
   repoUrl: string;
@@ -18,9 +21,23 @@ const Page = () => {
     reset,
     formState: { errors },
   } = useForm<FormInput>();
-
+  const createProject = api.project.createProject.useMutation()
+  const refetch = useRefetch()
   const onSubmit = async (data: FormInput) => {
-    window.alert(JSON.stringify(data, null, 2));
+    createProject.mutate({
+      name: data.Projectname,
+      githubUrl: data.repoUrl,
+      githubToken: data.githubToken,
+    },{
+      onSuccess: () => {
+        toast.success("Project created successfully");
+        refetch();// custom hook to refetch the projects
+        reset();
+      },
+      onError: () => {
+        toast.error("Failed to create project");
+      },
+    });
   };
 
   return (
@@ -52,9 +69,9 @@ const Page = () => {
           <Image
             src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg"
             alt="GitHub"
-            width={28}
-            height={28}
-            className="inline-block"
+            width={32}
+            height={32}
+            className="inline-block  bg-white rounded-full "
           />
         </div>
         <p className="text-sm text-muted-foreground mb-6 text-center">
@@ -109,7 +126,8 @@ const Page = () => {
           </div>
           <Button
             type="submit"
-            className="bg-primary text-primary-foreground rounded px-4 py-2 font-semibold shadow hover:bg-primary/90 transition-colors mt-2"
+            className="bg-primary text-primary-foreground rounded-md px-4 py-2 font-semibold shadow hover:bg-primary/90 transition-colors mt-2 cursor-pointer"
+            disabled={createProject.isPending }
           >
             Create Project
           </Button>
