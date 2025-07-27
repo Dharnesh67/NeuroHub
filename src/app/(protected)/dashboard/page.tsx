@@ -1,5 +1,7 @@
 "use client";
+import { useEffect } from "react";
 import useProjects from "@/hooks/use-projects";
+import { PullCommits } from "@/lib/github1";
 import { UserButton } from "@clerk/nextjs";
 import { ExternalLink, Github } from "lucide-react";
 import Link from "next/link";
@@ -7,9 +9,11 @@ import React from "react";
 
 const Page = () => {
   const { Project } = useProjects();
+
   return (
     <div className="flex w-full flex-col justify-start gap-2">
       {/* Topbar */}
+      {Project?.id}
       <div className="topbar mb-4 flex flex-col items-center justify-between gap-4 md:flex-row">
         {/* Github Url */}
         <div className="Url border-primary bg-primary/90 flex items-center gap-3 rounded-lg border px-4 py-3 shadow-md">

@@ -1,5 +1,7 @@
 # NeuroHub – AI Codebase Assistant
 
+
+npm install @google/genai
 https://dev.to/saminarp/today-i-learned-using-octokit-2bdm
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-NeuroHub-blue?logo=github)](https://github.com/Dharnesh67/NeuroHub)
