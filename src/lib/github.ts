@@ -1,13 +1,29 @@
 import { Octokit } from "octokit";
-import type { ResponseType,Project } from "@/type";
+import type { ResponseType, Project } from "@/type";
 import { db } from "@/server/db";
 import { generateCommitSummary } from "./gemini";
+
+// Rate limiting configuration
+const RATE_LIMIT_DELAY = 1000; // 1 second between requests
+const MAX_COMMITS_PER_REQUEST = 30;
+const MAX_CONCURRENT_REQUESTS = 3;
+
 export const github = new Octokit({
   auth: process.env.GITHUB_TOKEN,
 });
-
 const TestgithubUrl = "https://github.com/Dharnesh67/NeuroHub";
 
+
+// Utility function for rate limiting
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Enhanced error handling
+class GitHubError extends Error {
+  constructor(message: string, public status?: number, public code?: string) {
+    super(message);
+    this.name = 'GitHubError';
+  }
+}
 
 interface CommitHash {
   commitHash: string;
@@ -23,174 +39,285 @@ export interface CommitDetail {
   commitAuthorName: string;
   commitDate: string;
   commitAuthorAvatar: string;
-  filesChanged: string[];
-  additions: number;
-  deletions: number;
+  filesChanged?: string[];
+  additions?: number;
+  deletions?: number;
   summary?: string;
 }
 
+// Enhanced URL parsing with validation
+export const parseGitHubUrl = (githubUrl: string): { owner: string; repo: string } => {
+  try {
+    const url = new URL(githubUrl);
+    if (url.hostname !== 'github.com') {
+      throw new Error('Invalid GitHub URL: must be from github.com');
+    }
+    
+    const parts = url.pathname.split("/").filter(Boolean);
+    if (parts.length < 2) {
+      throw new Error('Invalid GitHub URL: must include owner and repository');
+    }
+    
+    const owner = parts[0] || '';
+    const repo = (parts[1] || '').replace('.git', ''); // Remove .git suffix if present
+    
+    if (!owner || !repo) {
+      throw new Error('Invalid GitHub URL: owner and repository cannot be empty');
+    }
+    
+    return { owner, repo };
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new GitHubError(`Failed to parse GitHub URL: ${error.message}`);
+    }
+    throw new GitHubError('Invalid GitHub URL format');
+  }
+};
+
 export const getCommitHash = async (
   githubUrl: string,
+  maxCommits: number = MAX_COMMITS_PER_REQUEST
 ): Promise<CommitHash[]> => {
-  // Parse owner and repo from githubUrl
-  let owner:string = "";
-  let repo:string = "";
   try {
-    const url = new URL(TestgithubUrl); // Fixed: use passed githubUrl instead of TestgithubUrl
-    const parts = url.pathname.split("/").filter(Boolean);
-    if (parts.length >= 2) {
-      owner = parts?.[0] || "";
-      repo = parts?.[1] || "" ;
-    } else {
-      throw new Error("Invalid GitHub URL");
+    const { owner, repo } = parseGitHubUrl(TestgithubUrl);
+    
+    console.log(`Fetching commits for ${owner}/${repo}`);
+    
+    const data = await github.rest.repos.listCommits({
+      owner,
+      repo,
+      per_page: Math.min(maxCommits, 100), // GitHub API max is 100
+    });
+
+    if (!data.data || data.data.length === 0) {
+      console.log(`No commits found for ${owner}/${repo}`);
+      return [];
     }
-  } catch (e) {
-    throw new Error("Invalid GitHub URL");
+
+    const sortedCommits = data.data.sort(
+      (a, b) =>
+        new Date(b.commit?.author?.date || "").getTime() -
+        new Date(a.commit?.author?.date || "").getTime(),
+    );
+
+    return sortedCommits.slice(0, maxCommits).map((commit) => ({
+      commitHash: commit.sha,
+      commitMessage: commit.commit?.message || "",
+      commitAuthorName: commit.commit?.author?.name || "",
+      commitDate: commit.commit?.author?.date || "",
+      commitAuthorAvatar: commit.author?.avatar_url || "",
+    }));
+  } catch (error) {
+    console.error('Error fetching commits:', error);
+    if (error instanceof Error) {
+      throw new GitHubError(`Failed to fetch commits: ${error.message}`);
+    }
+    throw new GitHubError('Unknown error occurred while fetching commits');
   }
+};
 
-  const data = await github.rest.repos.listCommits({
-    owner,
-    repo,
-    per_page: 10,
-  });
-  console.log("data",data);
-  const SortedCommits = data.data.sort(
-    (a, b) =>
-      new Date(b.commit?.author?.date || "").getTime() -
-      new Date(a.commit?.author?.date || "").getTime(),
-  );
+// Enhanced commit fetching with detailed information
+export const getCommitDetails = async (
+  githubUrl: string,
+  commitHash: string
+): Promise<CommitDetail> => {
+  try {
+    const { owner, repo } = parseGitHubUrl(githubUrl);
+    
+    // Add rate limiting delay
+    await delay(RATE_LIMIT_DELAY);
+    
+    const commitData = await github.rest.repos.getCommit({
+      owner,
+      repo,
+      ref: commitHash,
+    });
 
-  return SortedCommits.slice(0, 10).map((commit) => {
+    const commit = commitData.data;
+    const stats = commit.stats || { additions: 0, deletions: 0 };
+    const filesChanged = commit.files?.map(file => file.filename || '').filter(Boolean) || [];
+
     return {
       commitHash: commit.sha,
       commitMessage: commit.commit?.message || "",
       commitAuthorName: commit.commit?.author?.name || "",
       commitDate: commit.commit?.author?.date || "",
       commitAuthorAvatar: commit.author?.avatar_url || "",
+      filesChanged,
+      additions: stats.additions,
+      deletions: stats.deletions,
     };
-  });
+  } catch (error) {
+    console.error(`Error fetching commit details for ${commitHash}:`, error);
+    throw new GitHubError(`Failed to fetch commit details: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
+
+// Batch processing with concurrency control
+const processBatch = async <T, R>(
+  items: T[],
+  processor: (item: T) => Promise<R>,
+  batchSize: number = MAX_CONCURRENT_REQUESTS
+): Promise<R[]> => {
+  const results: R[] = [];
+  
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.allSettled(
+      batch.map(item => processor(item))
+    );
+    
+    batchResults.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        results.push(result.value);
+      } else {
+        console.error(`Failed to process item ${i + index}:`, result.reason);
+      }
+    });
+    
+    // Add delay between batches to respect rate limits
+    if (i + batchSize < items.length) {
+      await delay(RATE_LIMIT_DELAY);
+    }
+  }
+  
+  return results;
 };
 
 export const PullCommits = async (ProjectId: string) => {
-  console.log("Called PullCommits");
-  const { project,githubUrl } = await fetchGithubUrl(ProjectId);
-  const commitsHashes = await getCommitHash(githubUrl || "");
-  const unprocessedCommits = await filterUnprocessedCommits(commitsHashes,ProjectId);
-  console.log("unprocessedCommits",unprocessedCommits);
-  return unprocessedCommits;
+  console.log(`Starting PullCommits for project ${ProjectId}`);
+  
+  try {
+    const { project, githubUrl } = await fetchGithubUrl(ProjectId);
+    
+    if (!githubUrl) {
+      throw new Error("GitHub URL not found for project");
+    }
+
+    // Fetch commits
+    const commitsHashes = await getCommitHash(githubUrl);
+    console.log(`Found ${commitsHashes.length} commits`);
+
+    // Filter unprocessed commits
+    const unprocessedCommits = await filterUnprocessedCommits(commitsHashes, ProjectId);
+    console.log(`Found ${unprocessedCommits.length} unprocessed commits`);
+
+    if (unprocessedCommits.length === 0) {
+      console.log('No new commits to process');
+      return { processed: 0, total: commitsHashes.length };
+    }
+
+    // Process commits in batches with detailed information
+    const commitDetails = await processBatch(
+      unprocessedCommits,
+      async (commit) => {
+        const details = await getCommitDetails(githubUrl, commit.commitHash);
+        return { ...commit, ...details };
+      }
+    );
+
+    // Generate summaries in batches
+    const summaries = await processBatch(
+      commitDetails,
+      async (commit) => {
+        try {
+          const summary = await generateCommitSummary(commit);
+          return summary;
+        } catch (error) {
+          console.error(`Failed to generate summary for ${commit.commitHash}:`, error);
+          return "Summary generation failed.";
+        }
+      }
+    );
+
+    // Batch insert into database
+    const commitsToInsert = commitDetails.map((commit, index) => ({
+      projectId: ProjectId,
+      commitMessage: commit.commitMessage,
+      commitHash: commit.commitHash,
+      commitAuthorName: commit.commitAuthorName,
+      commitDate: new Date(commit.commitDate),
+      commitAuthorAvatar: commit.commitAuthorAvatar,
+      Summary: summaries[index] || "",
+    }));
+
+    const result = await db.commit.createMany({
+      data: commitsToInsert,
+      skipDuplicates: true, // Prevent duplicate entries
+    });
+
+    console.log(`Successfully processed ${result.count} commits`);
+    return { processed: result.count, total: commitsHashes.length };
+    
+  } catch (error) {
+    console.error('Error in PullCommits:', error);
+    throw error;
+  }
 };
 
 async function fetchGithubUrl(ProjectId: string) {
   const project = await db.project.findUnique({
-    where: {
-      id: ProjectId,  
-    },
-    select: {
-      githubUrl: true,
-    },
+    where: { id: ProjectId },
+    select: { githubUrl: true, name: true },
   });
-  if(!project) {
+  
+  if (!project) {
     throw new Error("Project not found");
   }
+  
   return { project, githubUrl: project.githubUrl };
 }
 
-export async function SummarizeCommit(githubUrl: string, commitHash: string): Promise<CommitDetail> {
-  // Parse owner and repo from githubUrl
-  let owner: string = "";
-  let repo: string = "";
+// Enhanced commit summarization with better error handling
+export async function SummarizeCommit(githubUrl: string, commitHash: string) {
   try {
-    const url = new URL(githubUrl);
-    const parts = url.pathname.split("/").filter(Boolean);
-    if (parts.length >= 2) {
-      owner = parts?.[0] || "";
-      repo = parts?.[1] || "";
-    } else {
-      throw new Error("Invalid GitHub URL");
-    }
-  } catch (e) {
-    throw new Error("Invalid GitHub URL");
+    const { owner, repo } = parseGitHubUrl(githubUrl);
+    
+    // Fetch commit details instead of raw diff for better context
+    const commitDetails = await getCommitDetails(githubUrl, commitHash);
+    
+    const summary = await generateCommitSummary(commitDetails);
+    return summary;
+  } catch (error) {
+    console.error(`Error summarizing commit ${commitHash}:`, error);
+    return "Summary generation failed.";
   }
-
-  // Get detailed commit information
-  const commitData = await github.rest.repos.getCommit({
-    owner,
-    repo,
-    ref: commitHash,
-  });
-
-  const commit = commitData.data;
-  const filesChanged = commit.files?.map(file => file.filename) || [];
-  const additions = commit.stats?.additions || 0;
-  const deletions = commit.stats?.deletions || 0;
-
-  // Generate a summary based on the commit message and changes
-  const commitDetail: CommitDetail = {
-    commitHash: commit.sha,
-    commitMessage: commit.commit?.message || "",
-    commitAuthorName: commit.commit?.author?.name || "",
-    commitDate: commit.commit?.author?.date || "",
-    commitAuthorAvatar: commit.author?.avatar_url || "",
-    filesChanged,
-    additions,
-    deletions,
-  }
-  const summary = await generateCommitSummary(commitDetail);
-  commitDetail.summary = summary;
-  return commitDetail;
 }
-
 
 async function filterUnprocessedCommits(commitsHashes: CommitHash[], ProjectId: string) {
-  const ProcessedCommits = await db.commit.findMany({
-    where: {
-      projectId: ProjectId,
-    },
-  });
-  const unprocessedCommits = commitsHashes.filter((commitHash) => !ProcessedCommits.some((commit) => commit.commitHash === commitHash.commitHash));
-  return unprocessedCommits;
-}
-
-export async function saveCommitToDatabase(commitDetail: CommitDetail, ProjectId: string) {
   try {
-    const savedCommit = await db.commit.create({
-      data: {
-        projectId: ProjectId,
-        commitMessage: commitDetail.commitMessage,
-        commitHash: commitDetail.commitHash,
-        commitAuthorName: commitDetail.commitAuthorName,
-        commitDate: new Date(commitDetail.commitDate),
-        commitAuthorAvatar: commitDetail.commitAuthorAvatar,
-        Summary: commitDetail.summary,
-      },
+    const processedCommits = await db.commit.findMany({
+      where: { projectId: ProjectId },
+      select: { commitHash: true },
     });
-    return savedCommit;
+
+    const processedHashes = new Set(processedCommits.map(commit => commit.commitHash));
+    const unprocessedCommits = commitsHashes.filter(
+      (commit) => !processedHashes.has(commit.commitHash)
+    );
+
+    return unprocessedCommits;
   } catch (error) {
-    console.error("Error saving commit to database:", error);
+    console.error('Error filtering unprocessed commits:', error);
     throw error;
   }
 }
 
-export async function processAndSaveCommits(ProjectId: string) {
+// New function to get project statistics
+export const getProjectStats = async (ProjectId: string) => {
   try {
-    const { githubUrl } = await fetchGithubUrl(ProjectId);
-    const commitsHashes = await getCommitHash(githubUrl || "");
-    const unprocessedCommits = await filterUnprocessedCommits(commitsHashes, ProjectId);
-    
-    const processedCommits = [];
-    
-    for (const commit of unprocessedCommits) {
-      const commitDetail = await SummarizeCommit(githubUrl || "", commit.commitHash);
-      const savedCommit = await saveCommitToDatabase(commitDetail, ProjectId);
-      processedCommits.push(savedCommit);
-    }
-    
-    return processedCommits;
+    const stats = await db.commit.groupBy({
+      by: ['projectId'],
+      where: { projectId: ProjectId },
+      _count: { commitHash: true },
+    });
+
+    return stats[0] || { _count: { commitHash: 0 } };
   } catch (error) {
-    console.error("Error processing commits:", error);
+    console.error('Error getting project stats:', error);
     throw error;
   }
-}
+};
 
 
 

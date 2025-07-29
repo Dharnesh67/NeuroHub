@@ -9,7 +9,6 @@ import {
 } from "@clerk/nextjs";
 import { type Metadata } from "next";
 import { Orbitron, Share_Tech_Mono } from "next/font/google";
-import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
@@ -20,6 +19,7 @@ export const metadata: Metadata = {
 };
 
 import { TRPCReactProvider } from "@/trpc/react";
+import { ThemeProvider } from "@/components/theme-provider";
 
 // Orbitron is a futuristic sans-serif font, Share Tech Mono is a techy monospace
 const orbitron = Orbitron({
@@ -42,8 +42,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="en">
+    <ClerkProvider
+    >
+      <html >
         <body
           className={`${orbitron.variable} ${shareTechMono.variable} antialiased `}
         >

@@ -54,30 +54,36 @@ const AppSidebar = () => {
   // Using Custom Hook use-projects.tsx
   const { projects, projectId, Project, setProjectId } = useProjects();
 
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (typeof window !== "undefined") {
-      const stored = window.localStorage.getItem("sidebar-collapsed");
-      return stored === "true";
-    }
-    return false;
-  });
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  
   const { user } = useUser();
   const { theme, setTheme, resolvedTheme } = useTheme();
+  
+  // Initialize client-side state
+  useEffect(() => {
+    setIsClient(true);
+    const stored = window.localStorage.getItem("sidebar-collapsed");
+    setIsCollapsed(stored === "true");
+  }, []);
+
   // Auto-collapse on mobile, expand on desktop
   useEffect(() => {
-    if (isMobile) setIsCollapsed(true);
-    else {
-      const stored = window.localStorage.getItem("sidebar-collapsed");
-      setIsCollapsed(stored === "true");
+    if (isClient) {
+      if (isMobile) setIsCollapsed(true);
+      else {
+        const stored = window.localStorage.getItem("sidebar-collapsed");
+        setIsCollapsed(stored === "true");
+      }
     }
-  }, [isMobile]);
+  }, [isMobile, isClient]);
 
   // Persist collapse state (not on mobile)
   useEffect(() => {
-    if (!isMobile) {
+    if (isClient && !isMobile) {
       window.localStorage.setItem("sidebar-collapsed", String(isCollapsed));
     }
-  }, [isCollapsed, isMobile]);
+  }, [isCollapsed, isMobile, isClient]);
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
@@ -201,7 +207,10 @@ const AppSidebar = () => {
                   className="group flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-[var(--sidebar-foreground)] shadow-md transition-colors duration-150 hover:animate-pulse hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-accent-foreground)] focus:ring-2 focus:ring-[var(--sidebar-accent)] focus:outline-none"
                   title={isCollapsed ? project.name : undefined}
                   tabIndex={0}
-                  onClick={() => setProjectId(project.id)}
+                  onClick={() => {
+                    setProjectId(project.id);
+                    redirect("/dashboard");
+                  }}
                 >
                   <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--sidebar)] text-[var(--sidebar-foreground)] transition-colors duration-150 group-hover:bg-[var(--sidebar-accent)] group-hover:text-[var(--sidebar-accent-foreground)]">
                     <FolderGit2 className="h-5 w-5" />
@@ -242,19 +251,19 @@ const AppSidebar = () => {
         {/* Theme Toggle */}
         <section className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-[var(--sidebar-border)] p-4 shadow-[var(--sidebar-ring)] shadow-md">
           <div className="flex items-center gap-2">
-            {resolvedTheme === "dark" ? (
+            {isClient && resolvedTheme === "dark" ? (
               <Moon className="h-5 w-5" />
             ) : (
               <Sun className="h-5 w-5" />
             )}
             {!isCollapsed && (
               <span className="text-sm font-medium">
-                {resolvedTheme === "dark" ? "Dark Mode" : "Light Mode"}
+                {isClient && resolvedTheme === "dark" ? "Dark Mode" : "Light Mode"}
               </span>
             )}
           </div>
           <Switch
-            checked={resolvedTheme === "dark"}
+            checked={isClient && resolvedTheme === "dark"}
             onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
             aria-label="Toggle theme"
           />
