@@ -138,7 +138,7 @@ const AppSidebar = () => {
   return (
     <>
       <aside
-        className={`${isCollapsed ? "w-20 min-w-[5rem]" : "w-64 min-w-[16rem]"} m-2 flex flex-col rounded-xl border border-[var(--sidebar-border)] bg-[var(--sidebar)] text-[var(--sidebar-foreground)] shadow-2xl transition-[width] duration-300 ease-in-out`}
+        className={`${isCollapsed ? "w-16 min-w-[4rem] sm:w-20 sm:min-w-[5rem]" : "w-56 min-w-[14rem] sm:w-64 sm:min-w-[16rem]"} m-1 sm:m-2 flex flex-col rounded-xl border border-[var(--sidebar-border)] bg-[var(--sidebar)] text-[var(--sidebar-foreground)] shadow-2xl transition-[width] duration-300 ease-in-out`}
         aria-label="Application sidebar"
       >
         {/* Collapse Button */}
@@ -164,21 +164,22 @@ const AppSidebar = () => {
         </div>
 
         {/* Sidebar Header */}
-        <div className="flex items-center gap-3 border-b border-[var(--sidebar-border)] px-6 py-5">
+        <div className="flex items-center gap-3 border-b border-[var(--sidebar-border)] px-4 py-3 sm:px-6 sm:py-4">
           <Link
             href="/dashboard"
-            className="flex items-center gap-3 cursor-pointer"
+            className="flex items-center gap-2 sm:gap-3 cursor-pointer"
             aria-label="Go to dashboard"
           >
             <Image
               src="/logo.svg"
               alt="NeuroHub logo"
-              width={36}
-              height={36}
+              width={28}
+              height={28}
+              className="sm:w-9 sm:h-9"
               priority
             />
             {!isCollapsed && (
-              <span className="text-2xl font-extrabold tracking-tight text-[var(--sidebar-foreground)]">
+              <span className="text-lg sm:text-xl lg:text-2xl font-bold tracking-tight text-[var(--sidebar-foreground)]">
                 NeuroHub
               </span>
             )}
@@ -186,14 +187,14 @@ const AppSidebar = () => {
         </div>
 
         {/* Sidebar Content */}
-        <nav className="flex flex-1 flex-col overflow-y-auto px-2 py-4">
+        <nav className="flex flex-1 flex-col overflow-y-auto px-2 py-2 sm:py-4">
           {/* Application Group */}
           <section 
-            className="mt-4 rounded-xl border border-[var(--sidebar-border)] p-2 shadow-[var(--sidebar-ring)] shadow-md"
+            className="mt-2 sm:mt-4 rounded-xl border border-[var(--sidebar-border)] p-2 shadow-[var(--sidebar-ring)] shadow-md"
             aria-label="Application navigation"
           >
             {!isCollapsed && (
-              <h2 className="px-2 py-2 text-xs font-semibold tracking-widest text-[var(--sidebar-accent-foreground)] uppercase">
+              <h2 className="px-2 py-1 sm:py-2 text-xs font-semibold tracking-widest text-[var(--sidebar-accent-foreground)] uppercase">
                 Application
               </h2>
             )}
@@ -204,7 +205,7 @@ const AppSidebar = () => {
                   <li key={label}>
                     <Link
                       href={href}
-                      className={`group flex items-center gap-3 rounded-lg px-3 py-2 font-medium transition-colors cursor-pointer ${
+                      className={`group flex items-center gap-2 sm:gap-3 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base font-medium transition-colors cursor-pointer ${
                         isActive
                           ? "bg-[var(--sidebar-primary)] text-[var(--sidebar-primary-foreground)] shadow"
                           : "text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-accent-foreground)]"
@@ -213,16 +214,16 @@ const AppSidebar = () => {
                       aria-current={isActive ? "page" : undefined}
                     >
                       <span
-                        className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
+                        className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-md transition-colors ${
                           isActive
                             ? "bg-[var(--sidebar-primary)] text-[var(--sidebar-primary-foreground)]"
                             : "bg-[var(--sidebar)] text-[var(--sidebar-foreground)] group-hover:text-[var(--sidebar-accent-foreground)]"
                         }`}
                       >
-                        <Icon className="h-5 w-5" aria-hidden="true" />
+                        <Icon className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
                       </span>
                       {!isCollapsed && (
-                        <span className="truncate">{label}</span>
+                        <span className="truncate text-xs sm:text-sm">{label}</span>
                       )}
                     </Link>
                   </li>
@@ -233,7 +234,7 @@ const AppSidebar = () => {
 
           {/* Projects Group */}
           <section 
-            className="mt-4 rounded-xl border border-[var(--sidebar-border)] bg-[var(--sidebar-bg-alt,transparent)] p-3 shadow-[var(--sidebar-ring)] shadow-md"
+            className="mt-2 sm:mt-4 rounded-xl border border-[var(--sidebar-border)] bg-[var(--sidebar-bg-alt,transparent)] p-2 sm:p-3 shadow-[var(--sidebar-ring)] shadow-md"
             aria-label="Projects navigation"
           >
             {!isCollapsed && (
@@ -245,7 +246,7 @@ const AppSidebar = () => {
               {projects?.map((project) => (
                 <li key={project.id}>
                   <div 
-                    className="group flex items-center gap-3 rounded-lg border px-3 py-2 text-[var(--sidebar-foreground)] shadow-md transition-colors duration-150 hover:animate-pulse hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-accent-foreground)] focus:ring-2 focus:ring-[var(--sidebar-accent)] focus:outline-none cursor-pointer"
+                    className="group flex items-center gap-2 sm:gap-3 rounded-lg border px-2 sm:px-3 py-1.5 sm:py-2 text-[var(--sidebar-foreground)] shadow-md transition-colors duration-150 hover:animate-pulse hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-accent-foreground)] focus:ring-2 focus:ring-[var(--sidebar-accent)] focus:outline-none cursor-pointer"
                     role="button"
                     tabIndex={0}
                     onClick={() => handleProjectSelect(project.id)}
@@ -257,14 +258,14 @@ const AppSidebar = () => {
                     }}
                   >
                     <div
-                      className="flex flex-1 items-center gap-3"
+                      className="flex flex-1 items-center gap-2 sm:gap-3"
                       title={isCollapsed ? project.name : undefined}
                     >
-                      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--sidebar)] text-[var(--sidebar-foreground)] transition-colors duration-150 group-hover:bg-[var(--sidebar-accent)] group-hover:text-[var(--sidebar-accent-foreground)]">
-                        <FolderGit2 className="h-5 w-5" aria-hidden="true" />
+                      <span className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-md bg-[var(--sidebar)] text-[var(--sidebar-foreground)] transition-colors duration-150 group-hover:bg-[var(--sidebar-accent)] group-hover:text-[var(--sidebar-accent-foreground)]">
+                        <FolderGit2 className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
                       </span>
                       {!isCollapsed && (
-                        <span className="truncate text-sm font-medium">
+                        <span className="truncate text-xs sm:text-sm font-medium">
                           {project.name}
                         </span>
                       )}
@@ -275,11 +276,11 @@ const AppSidebar = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                            className="h-5 w-5 sm:h-6 sm:w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                             onClick={(e) => e.stopPropagation()}
                             aria-label={`More options for ${project.name}`}
                           >
-                            <MoreVertical className="h-3 w-3" aria-hidden="true" />
+                            <MoreVertical className="h-3 w-3 sm:h-3 sm:w-3" aria-hidden="true" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -300,23 +301,23 @@ const AppSidebar = () => {
                 </li>
               ))}
             </ul>
-            <div className="my-4 flex items-center justify-center">
+            <div className="my-2 sm:my-4 flex items-center justify-center">
               {!isCollapsed ? (
                 <Link
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--sidebar-primary)] px-3 py-2 font-semibold text-[var(--sidebar-primary-foreground)] shadow transition-colors duration-150 hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-accent-foreground)] focus:ring-2 focus:ring-[var(--sidebar-accent)] focus:outline-none cursor-pointer"
+                  className="flex w-full items-center justify-center gap-1 sm:gap-2 rounded-lg bg-[var(--sidebar-primary)] px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-[var(--sidebar-primary-foreground)] shadow transition-colors duration-150 hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-accent-foreground)] focus:ring-2 focus:ring-[var(--sidebar-accent)] focus:outline-none cursor-pointer"
                   href="/create-project"
                   aria-label="Add Project"
                 >
-                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  <Plus className="h-3 w-3 sm:h-4 sm:w-4" aria-hidden="true" />
                   <span>Add Project</span>
                 </Link>
               ) : (
                 <Link
                   href="/create-project"
-                  className="flex items-center justify-center rounded-lg bg-[var(--sidebar-primary)] p-2 font-semibold text-[var(--sidebar-primary-foreground)] shadow transition-colors duration-150 hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-accent-foreground)] focus:ring-2 focus:ring-[var(--sidebar-accent)] focus:outline-none cursor-pointer"
+                  className="flex items-center justify-center rounded-lg bg-[var(--sidebar-primary)] p-1.5 sm:p-2 font-semibold text-[var(--sidebar-primary-foreground)] shadow transition-colors duration-150 hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-accent-foreground)] focus:ring-2 focus:ring-[var(--sidebar-accent)] focus:outline-none cursor-pointer"
                   aria-label="Add Project"
                 >
-                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  <Plus className="h-3 w-3 sm:h-4 sm:w-4" aria-hidden="true" />
                 </Link>
               )}
             </div>
@@ -327,17 +328,17 @@ const AppSidebar = () => {
 
           {/* Theme Toggle */}
           <section 
-            className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-[var(--sidebar-border)] p-4 shadow-[var(--sidebar-ring)] shadow-md"
+            className="mt-2 sm:mt-4 flex items-center justify-between gap-2 sm:gap-3 rounded-xl border border-[var(--sidebar-border)] p-3 sm:p-4 shadow-[var(--sidebar-ring)] shadow-md"
             aria-label="Theme toggle"
           >
             <div className="flex items-center gap-2">
               {currentTheme === "dark" ? (
-                <Moon className="h-5 w-5" aria-hidden="true" />
+                <Moon className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
               ) : (
-                <Sun className="h-5 w-5" aria-hidden="true" />
+                <Sun className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
               )}
               {!isCollapsed && (
-                <span className="text-sm font-medium">
+                <span className="text-xs sm:text-sm font-medium">
                   {currentTheme === "dark" ? "Dark Mode" : "Light Mode"}
                 </span>
               )}
@@ -352,22 +353,22 @@ const AppSidebar = () => {
 
           {/* User Profile / Footer */}
           <footer 
-            className="mt-6 flex items-center gap-3 rounded-xl border border-[var(--sidebar-border)] p-4 px-2 text-[var(--sidebar-foreground)] shadow-[var(--sidebar-ring)] shadow-md"
+            className="mt-4 sm:mt-6 flex items-center gap-2 sm:gap-3 rounded-xl border border-[var(--sidebar-border)] p-3 sm:p-4 px-2 text-[var(--sidebar-foreground)] shadow-[var(--sidebar-ring)] shadow-md"
             aria-label="User profile"
           >
-            <div className="flex w-full items-center gap-3">
+            <div className="flex w-full items-center gap-2 sm:gap-3">
               <UserButton
                 showName={false}
                 appearance={{
                   elements: {
-                    userButtonAvatarBox: "h-10 w-10",
+                    userButtonAvatarBox: "h-8 w-8 sm:h-10 sm:w-10",
                     userButtonBox: "flex items-center gap-2",
                   },
                 }}
               />
               {!isCollapsed && (
                 <div className="flex min-w-0 flex-col">
-                  <span className="truncate text-sm font-semibold text-[var(--sidebar-foreground)]">
+                  <span className="truncate text-xs sm:text-sm font-semibold text-[var(--sidebar-foreground)]">
                     {userInfo.name}
                   </span>
                   {userInfo.email && (

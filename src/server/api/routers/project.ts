@@ -275,6 +275,7 @@ export const projectRouter = createTRPCRouter({
             commitDate: "desc",
           },
         });
+        // If No commits, pull commits
         PullCommits(input.projectId).then((result) => {
           console.log("Commits refreshed:", result);
         }).catch((error) => {
