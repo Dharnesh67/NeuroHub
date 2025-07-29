@@ -205,10 +205,9 @@ export const projectRouter = createTRPCRouter({
           throw new Error("Project not found or access denied");
         }
 
-        // Soft delete the project
-        await ctx.db.project.update({
+        // Hard delete the project
+        await ctx.db.project.delete({
           where: { id: input.projectId },
-          data: { deletedAt: new Date() },
         });
 
         return {
@@ -255,7 +254,7 @@ export const projectRouter = createTRPCRouter({
     .input(projectIdSchema)
     .query(async ({ ctx, input }) => {
       try {
-        // Verify project ownership
+        // Verify project ownership and not deleted
         const project = await ctx.db.project.findFirst({
           where: {
             id: input.projectId,
@@ -276,7 +275,11 @@ export const projectRouter = createTRPCRouter({
             commitDate: "desc",
           },
         });
-
+        PullCommits(input.projectId).then((result) => {
+          console.log("Commits refreshed:", result);
+        }).catch((error) => {
+          console.error("Error refreshing commits:", error);
+        });
         return commits;
       } catch (error) {
         console.error("Error fetching project commits:", error);

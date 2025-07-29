@@ -32,53 +32,78 @@ const generateCacheKey = (commitDetail: CommitDetail): string => {
   return `${commitDetail.commitHash}-${(commitDetail.commitMessage || '').substring(0, 50)}`;
 };
 
-// Enhanced prompt engineering
+// Enhanced prompt engineering with comprehensive commit analysis
 const createPrompt = (commitDetail: CommitDetail): string => {
   const {
     commitHash = "",
     commitMessage = "",
     commitAuthorName = "",
     commitDate = "",
+    commitAuthorAvatar = "",
     filesChanged = [],
     additions = 0,
-    deletions = 0,
+    deletions = 0
   } = commitDetail;
 
-  const filesList = filesChanged.length > 0 
-    ? filesChanged.map(f => `[${f}]`).join(", ")
+  const filesList = filesChanged && filesChanged.length > 0 
+    ? filesChanged.map(f => `[${f}]`).join("\n  ")
     : "None";
 
-  return `You are an expert software developer analyzing git commits. Your task is to create a concise, technical summary of the changes made in this commit.
+  return `You are an expert software developer analyzing git commits with deep technical knowledge. Your task is to create a detailed, technical summary of the changes made in this commit.
 
 COMMIT DETAILS:
 - Hash: ${commitHash.substring(0, 8)}
 - Author: ${commitAuthorName}
 - Date: ${commitDate}
 - Message: ${commitMessage}
-- Files Changed: ${filesList}
-- Additions: ${additions} lines
-- Deletions: ${deletions} lines
+- Files Changed:
+  ${filesList}
+- Total Changes: ${additions || 0} lines added, ${deletions || 0} lines deleted
 
-INSTRUCTIONS:
-1. Analyze the commit message and file changes
-2. Create a clear, technical summary in bullet points
-3. Focus on the main changes and their impact
-4. Use technical terminology appropriate for developers
-5. Keep each bullet point concise (max 100 characters)
-6. If the commit message is clear, expand on it
-7. If the commit message is unclear, infer the changes from file names and stats
+ANALYSIS INSTRUCTIONS:
+1. First, analyze the commit message for technical intent and clarity
+2. Examine changed files and their paths for patterns/relationships
+3. Review additions/deletions for change significance
+4. Note any test files changed alongside implementation files
+5. Detect if this is a merge commit, feature, bugfix, or refactor
+6. Identify potential impacts on dependent code
+
+SUMMARY REQUIREMENTS:
+1. Start with the primary purpose of the commit
+2. Include secondary changes in order of importance
+3. Note any architectural or design pattern changes
+4. Mention specific technologies/libraries affected
+5. Highlight security implications if present
+6. Call out test coverage changes
+7. Flag any potential breaking changes
+8. Keep each point technically precise but concise (max 120 chars)
 
 OUTPUT FORMAT:
-• [Summary of main change]
-• [Additional changes if any]
-• [Technical details if relevant]
+Provide a detailed, technical summary of the commit using the following bullet point structure. For each point, be specific and concise, focusing on the technical impact and intent of the change. Include as many relevant points as needed to fully capture the scope of the commit.
+
+• [Main change] - Clearly state the primary technical modification or feature introduced in this commit.
+• [Secondary changes] - List any additional significant changes, enhancements, or fixes.
+• [Refactor] - Describe any code quality improvements, restructuring, or optimizations.
+• [Tests] - Summarize changes to test coverage, new or updated test cases, and their impact.
+• [Dependencies] - Note any updates, additions, or removals of libraries, packages, or dependencies.
+• [BREAKING] - Explicitly call out any breaking changes or backward-incompatible modifications.
+• [Security] - Highlight any security-related changes, fixes, or vulnerabilities addressed.
+• [Docs] - Mention updates to documentation, comments, or code annotations.
+• [Performance] - Describe any performance improvements or regressions.
+• [Other] - Include any other relevant technical details not covered above.
 
 EXAMPLE OUTPUT:
-• Added user authentication middleware
-• Implemented JWT token validation
-• Updated API routes to require authentication
+• Implemented OAuth2 authentication flow - Added /auth endpoints and middleware
+• Added JWT token generation and validation for secure user sessions
+• Refactored user service to support multiple authentication providers
+• Added integration and unit tests for authentication scenarios (87% coverage)
+• Updated axios dependency to v1.4.0 (security patch)
+• [BREAKING] Changed user session storage format to encrypted JWT
+• Fixed XSS vulnerability in login form input handling
+• Updated API documentation for new authentication endpoints
+• Improved login response time by optimizing database queries
 
-Please provide only the bullet points, no additional text.`;
+Only provide the bullet points as output. Do not include any extra commentary, explanations, or section headers.`;
 };
 
 export const generateCommitSummary = async (
@@ -209,7 +234,10 @@ const generateFallbackSummary = (commitDetail: CommitDetail): string => {
   
   // Add file change information
   if (filesChanged && filesChanged.length > 0) {
-    const fileTypes = new Set(filesChanged.map(f => f.split('.').pop() || 'unknown'));
+    const fileTypes = new Set(filesChanged.map(f => {
+      const parts = f.split('.');
+      return parts.length > 1 ? parts.pop() || 'unknown' : 'unknown';
+    }));
     if (fileTypes.size <= 3) {
       summary.push(`• Modified ${Array.from(fileTypes).join(', ')} files`);
     } else {

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/trpc/react";
 import { toast } from "sonner";
 import useRefetch from "@/hooks/use-refetch";
+import { redirect } from "next/navigation";
 
 type FormInput = {
   repoUrl: string;
@@ -31,6 +32,9 @@ const Page = () => {
     },{
       onSuccess: () => {
         toast.success("Project created successfully");
+        setTimeout(() => {
+          redirect("/dashboard");
+        }, 5000);
         refetch();// custom hook to refetch the projects
         reset();
       },

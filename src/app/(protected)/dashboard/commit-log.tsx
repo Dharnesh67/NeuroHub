@@ -28,6 +28,7 @@ function timeAgo(dateString: string) {
 
 const CommitLogs = () => {
   const { projectId } = useProjects();
+  
   const commitsQuery = api.project.getProjectCommits.useQuery(
     { projectId: projectId || "" },
     {
@@ -50,6 +51,20 @@ const CommitLogs = () => {
             </div>
           </div>
         ))}
+      </div>
+    );
+  }
+
+  if (!projectId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground space-y-4">
+        <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-full">
+          <GitCommit className="h-12 w-12 text-blue-600 dark:text-blue-400" />
+        </div>
+        <div className="text-center space-y-2">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">No project selected</h3>
+          <p className="text-lg text-gray-600 dark:text-gray-400">Please select a project to view commits</p>
+        </div>
       </div>
     );
   }
