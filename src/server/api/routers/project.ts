@@ -1,4 +1,5 @@
 import { PullCommits, getProjectStats } from "@/lib/github";
+import { indexGithubRepo } from "@/lib/github-loader";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { z } from "zod";
 
@@ -14,6 +15,12 @@ const createProjectSchema = z.object({
 
 const projectIdSchema = z.object({
   projectId: z.string().uuid("Invalid project ID"),
+});
+
+const projectCommitsSchema = z.object({
+  projectId: z.string().uuid("Invalid project ID"),
+  githubUrl: z.string().optional(),
+  githubToken: z.string().optional(),
 });
 
 export const projectRouter = createTRPCRouter({
@@ -61,15 +68,20 @@ export const projectRouter = createTRPCRouter({
           },
         });
 
-        // Start commit processing in the background (non-blocking)
-        PullCommits(project.id).catch((error) => {
-          console.error(`Background commit processing failed for project ${project.id}:`, error);
-        });
+        // Start commit processing and code indexing in the background (non-blocking)
+        (async () => {
+          try {
+            await PullCommits(project.id);
+            await indexGithubRepo(project.id, input.githubUrl, input.githubToken || "");
+          } catch (error) {
+            console.error(`Background commit processing or indexing failed for project ${project.id}:`, error);
+          }
+        })();
 
         return {
           success: true,
           project,
-          message: "Project created successfully. Commits are being processed in the background.",
+          message: "Project created successfully. Commits and codebase are being processed in the background.",
         };
       } catch (error) {
         console.error("Error creating project:", error);
@@ -172,14 +184,21 @@ export const projectRouter = createTRPCRouter({
           throw new Error("Project not found or access denied");
         }
 
-        // Start commit processing
-        const result = await PullCommits(input.projectId);
+        // Start commit processing and code indexing
+        const pullResult = await PullCommits(input.projectId);
+
+        // Also re-index the codebase to ensure new code is indexed
+        await indexGithubRepo(
+          input.projectId,
+          project.githubUrl,
+          ""
+        );
 
         return {
           success: true,
-          message: `Successfully processed ${result.processed} new commits out of ${result.total} total commits`,
-          processed: result.processed,
-          total: result.total,
+          message: `Successfully processed ${pullResult.processed} new commits out of ${pullResult.total} total commits. Codebase re-indexed.`,
+          processed: pullResult.processed,
+          total: pullResult.total,
         };
       } catch (error) {
         console.error("Error refreshing commits:", error);
@@ -251,7 +270,7 @@ export const projectRouter = createTRPCRouter({
     }),
 
   getProjectCommits: protectedProcedure
-    .input(projectIdSchema)
+    .input(projectCommitsSchema)
     .query(async ({ ctx, input }) => {
       try {
         // Verify project ownership and not deleted
@@ -269,18 +288,24 @@ export const projectRouter = createTRPCRouter({
           throw new Error("Project not found or access denied");
         }
 
+        // Always check for new commits before returning the list
+        // This ensures that if a new commit comes, we pull and index it
+        const repoUrl = input?.githubUrl || project.githubUrl;
+        const token = input?.githubToken || "";
+
+        // Pull new commits and index codebase if there are new commits
+        // (This could be optimized with a webhook or polling, but here we do it on every fetch)
+        await PullCommits(project.id);
+        await indexGithubRepo(project.id, repoUrl, token);
+
+        // Now fetch the latest commits from the DB
         const commits = await ctx.db.commit.findMany({
           where: { projectId: input.projectId },
           orderBy: {
             commitDate: "desc",
           },
         });
-        // If No commits, pull commits
-        PullCommits(input.projectId).then((result) => {
-          console.log("Commits refreshed:", result);
-        }).catch((error) => {
-          console.error("Error refreshing commits:", error);
-        });
+
         return commits;
       } catch (error) {
         console.error("Error fetching project commits:", error);
@@ -288,7 +313,4 @@ export const projectRouter = createTRPCRouter({
       }
     }),
 });
-
-
-
 

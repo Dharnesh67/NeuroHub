@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { CommitDetail } from "./github";
-
+import { Document } from "@langchain/core/documents";
 const Key = process.env.GEMINI_API_KEY;
 const genAi = new GoogleGenerativeAI(Key || "");
 
@@ -17,19 +17,23 @@ const MAX_TOKENS = 1000;
 const summaryCache = new Map<string, string>();
 
 // Utility function for delays
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Enhanced error handling
 class GeminiError extends Error {
-  constructor(message: string, public code?: string, public retryable?: boolean) {
+  constructor(
+    message: string,
+    public code?: string,
+    public retryable?: boolean,
+  ) {
     super(message);
-    this.name = 'GeminiError';
+    this.name = "GeminiError";
   }
 }
 
 // Generate cache key for commit
 const generateCacheKey = (commitDetail: CommitDetail): string => {
-  return `${commitDetail.commitHash}-${(commitDetail.commitMessage || '').substring(0, 50)}`;
+  return `${commitDetail.commitHash}-${(commitDetail.commitMessage || "").substring(0, 50)}`;
 };
 
 // Enhanced prompt engineering with comprehensive commit analysis
@@ -42,12 +46,13 @@ const createPrompt = (commitDetail: CommitDetail): string => {
     commitAuthorAvatar = "",
     filesChanged = [],
     additions = 0,
-    deletions = 0
+    deletions = 0,
   } = commitDetail;
 
-  const filesList = filesChanged && filesChanged.length > 0 
-    ? filesChanged.map(f => `[${f}]`).join("\n  ")
-    : "None";
+  const filesList =
+    filesChanged && filesChanged.length > 0
+      ? filesChanged.map((f) => `[${f}]`).join("\n  ")
+      : "None";
 
   return `You are an expert software developer analyzing git commits with deep technical knowledge. Your task is to create a detailed, technical summary of the changes made in this commit.
 
@@ -107,10 +112,10 @@ Only provide the bullet points as output. Do not include any extra commentary, e
 };
 
 export const generateCommitSummary = async (
-  commitDetail: CommitDetail
+  commitDetail: CommitDetail,
 ): Promise<string> => {
   // Validate input
-  if (!commitDetail || typeof commitDetail !== 'object') {
+  if (!commitDetail || typeof commitDetail !== "object") {
     return "No commit details provided.";
   }
 
@@ -121,7 +126,9 @@ export const generateCommitSummary = async (
   // Check cache first
   const cacheKey = generateCacheKey(commitDetail);
   if (summaryCache.has(cacheKey)) {
-    console.log(`Cache hit for commit ${commitDetail.commitHash.substring(0, 8)}`);
+    console.log(
+      `Cache hit for commit ${commitDetail.commitHash.substring(0, 8)}`,
+    );
     return summaryCache.get(cacheKey)!;
   }
 
@@ -137,7 +144,9 @@ export const generateCommitSummary = async (
   // Retry logic
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`Generating summary for commit ${commitDetail.commitHash.substring(0, 8)} (attempt ${attempt})`);
+      console.log(
+        `Generating summary for commit ${commitDetail.commitHash.substring(0, 8)} (attempt ${attempt})`,
+      );
 
       const result = await model.generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -154,12 +163,16 @@ export const generateCommitSummary = async (
 
       // Validate response
       if (!text || text.length < 10) {
-        throw new GeminiError("Generated summary is too short or empty", "INVALID_RESPONSE", true);
+        throw new GeminiError(
+          "Generated summary is too short or empty",
+          "INVALID_RESPONSE",
+          true,
+        );
       }
 
       // Cache the result
       summaryCache.set(cacheKey, text);
-      
+
       // Limit cache size to prevent memory issues
       if (summaryCache.size > 1000) {
         const firstKey = summaryCache.keys().next().value;
@@ -168,12 +181,16 @@ export const generateCommitSummary = async (
         }
       }
 
-      console.log(`Successfully generated summary for commit ${(commitDetail.commitHash || '').substring(0, 8)}`);
+      console.log(
+        `Successfully generated summary for commit ${(commitDetail.commitHash || "").substring(0, 8)}`,
+      );
       return text;
-
     } catch (error) {
       lastError = error as Error;
-      console.error(`Attempt ${attempt} failed for commit ${(commitDetail.commitHash || '').substring(0, 8)}:`, error);
+      console.error(
+        `Attempt ${attempt} failed for commit ${(commitDetail.commitHash || "").substring(0, 8)}:`,
+        error,
+      );
 
       // Check if error is retryable
       if (error instanceof GeminiError && !error.retryable) {
@@ -190,78 +207,83 @@ export const generateCommitSummary = async (
   }
 
   // All retries failed
-  console.error(`All attempts failed for commit ${(commitDetail.commitHash || '').substring(0, 8)}:`, lastError);
-  
+  console.error(
+    `All attempts failed for commit ${(commitDetail.commitHash || "").substring(0, 8)}:`,
+    lastError,
+  );
+
   // Return a fallback summary based on commit message
   const fallbackSummary = generateFallbackSummary(commitDetail);
   summaryCache.set(cacheKey, fallbackSummary);
-  
+
   return fallbackSummary;
 };
 
 // Fallback summary generation when AI fails
 const generateFallbackSummary = (commitDetail: CommitDetail): string => {
   const { commitMessage, filesChanged, additions, deletions } = commitDetail;
-  
+
   const summary: string[] = [];
-  
+
   // Extract key information from commit message
-  const message = (commitMessage || '').toLowerCase();
-  
-  if (message.includes('fix') || message.includes('bug')) {
-    summary.push('• Fixed bug or issue');
+  const message = (commitMessage || "").toLowerCase();
+
+  if (message.includes("fix") || message.includes("bug")) {
+    summary.push("• Fixed bug or issue");
   }
-  
-  if (message.includes('add') || message.includes('new')) {
-    summary.push('• Added new feature or functionality');
+
+  if (message.includes("add") || message.includes("new")) {
+    summary.push("• Added new feature or functionality");
   }
-  
-  if (message.includes('update') || message.includes('modify')) {
-    summary.push('• Updated existing functionality');
+
+  if (message.includes("update") || message.includes("modify")) {
+    summary.push("• Updated existing functionality");
   }
-  
-  if (message.includes('refactor')) {
-    summary.push('• Refactored code structure');
+
+  if (message.includes("refactor")) {
+    summary.push("• Refactored code structure");
   }
-  
-  if (message.includes('test')) {
-    summary.push('• Added or updated tests');
+
+  if (message.includes("test")) {
+    summary.push("• Added or updated tests");
   }
-  
-  if (message.includes('docs') || message.includes('readme')) {
-    summary.push('• Updated documentation');
+
+  if (message.includes("docs") || message.includes("readme")) {
+    summary.push("• Updated documentation");
   }
-  
+
   // Add file change information
   if (filesChanged && filesChanged.length > 0) {
-    const fileTypes = new Set(filesChanged.map(f => {
-      const parts = f.split('.');
-      return parts.length > 1 ? parts.pop() || 'unknown' : 'unknown';
-    }));
+    const fileTypes = new Set(
+      filesChanged.map((f) => {
+        const parts = f.split(".");
+        return parts.length > 1 ? parts.pop() || "unknown" : "unknown";
+      }),
+    );
     if (fileTypes.size <= 3) {
-      summary.push(`• Modified ${Array.from(fileTypes).join(', ')} files`);
+      summary.push(`• Modified ${Array.from(fileTypes).join(", ")} files`);
     } else {
       summary.push(`• Modified ${filesChanged.length} files`);
     }
   }
-  
+
   // Add stats information
   if ((additions && additions > 0) || (deletions && deletions > 0)) {
     summary.push(`• ${additions || 0} additions, ${deletions || 0} deletions`);
   }
-  
+
   // If no meaningful summary could be generated
   if (summary.length === 0) {
-    summary.push('• Code changes made');
+    summary.push("• Code changes made");
   }
-  
-  return summary.join('\n');
+
+  return summary.join("\n");
 };
 
 // Utility function to clear cache (useful for testing or memory management)
 export const clearSummaryCache = (): void => {
   summaryCache.clear();
-  console.log('Summary cache cleared');
+  console.log("Summary cache cleared");
 };
 
 // Utility function to get cache statistics
@@ -273,3 +295,131 @@ export const getCacheStats = (): { size: number; hits: number } => {
 };
 
 export default model;
+
+// export async function summariseCode(doc: Document) {
+//   try {
+//     if (!doc?.metadata?.source) {
+//       console.warn("No source metadata found in document");
+//       return "";
+//     }
+
+//     console.log("getting summary for", doc.metadata.source);
+//     const code = doc?.pageContent?.slice(0, 10000) || ""; // Limit to 10000 characters
+
+//     if (!code.trim()) {
+//       console.warn("Empty or no content found in document");
+//       return "";
+//     }
+
+//     const prompt = `
+// You are an intelligent senior software engineer who specialises in onboarding junior software engineers onto projects.
+// You are onboarding a junior software engineer and explaining to them the purpose of the ${doc.metadata.source} file.
+// Here is the code:
+// --
+// ${code}
+// --
+// [ ] Give a summary no more than 100 words of the code above.
+//     `;
+
+//     const response = await model.generateContent([prompt]);
+//     return response?.response?.text?.() || "";
+//   } catch (error) {
+//     console.error("Error in summariseCode:", error);
+//     return "";
+//   }
+// }
+
+export async function generateEmbedding(summary: string) {
+  try {
+    if (!summary?.trim()) {
+      console.warn("Empty summary provided for embedding generation");
+      return [];
+    }
+
+    const embeddingModel = genAi.getGenerativeModel({
+      model: "text-embedding-004",
+    });
+
+    const response = await embeddingModel.embedContent([summary.slice(0, 10000)]);
+
+    if (!response?.embedding?.values) {
+      console.warn("No embedding values found in response");
+      return [];
+    }
+
+    return response.embedding.values;
+  } catch (error) {
+    console.error("Error in generateEmbedding:", error);
+    return [];
+  }
+}
+
+
+
+
+// ... existing code ...
+export async function summariseCode(doc: Document) {
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 1000; // 1 second
+
+  try {
+    if (!doc?.metadata?.source) {
+      console.warn("No source metadata found in document");
+      return "";
+    }
+
+    console.log("getting summary for", doc.metadata.source);
+    const code = doc?.pageContent?.slice(0, 10000) || ""; // Limit to 10000 characters
+
+    if (!code.trim()) {
+      console.warn("Empty or no content found in document");
+      return "";
+    }
+
+    const prompt = `
+You are an intelligent senior software engineer who specialises in onboarding junior software engineers onto projects.
+You are onboarding a junior software engineer and explaining to them the purpose of the ${doc.metadata.source} file.
+Here is the code:
+--
+${code}
+--
+[ ] Give a summary no more than 100 words of the code above.
+    `;
+
+    let lastError: any = null;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const response = await model.generateContent([prompt]);
+        const text = response?.response?.text?.() || "";
+        if (!text.trim()) {
+          throw new Error("Empty summary returned");
+        }
+        return text;
+      } catch (error: any) {
+        lastError = error;
+        // Check for rate limit (429) or retryable error
+        if (error?.status === 429 || error?.statusText === "Too Many Requests") {
+          const waitTime = RETRY_DELAY * Math.pow(2, attempt - 1);
+          console.warn(`Rate limited by Gemini API. Retrying in ${waitTime}ms (attempt ${attempt})...`);
+          await new Promise((res) => setTimeout(res, waitTime));
+        } else {
+          // For other errors, only retry if not the last attempt
+          if (attempt < MAX_RETRIES) {
+            const waitTime = RETRY_DELAY * Math.pow(2, attempt - 1);
+            console.warn(`Error in summariseCode, retrying in ${waitTime}ms (attempt ${attempt})...`, error);
+            await new Promise((res) => setTimeout(res, waitTime));
+          } else {
+            break;
+          }
+        }
+      }
+    }
+    // All retries failed
+    console.error("All attempts failed in summariseCode:", lastError);
+    return "";
+  } catch (error) {
+    console.error("Error in summariseCode:", error);
+    return "";
+  }
+}
+// ... existing code ...
