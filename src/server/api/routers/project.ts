@@ -296,7 +296,7 @@ export const projectRouter = createTRPCRouter({
         // Pull new commits and index codebase if there are new commits
         // (This could be optimized with a webhook or polling, but here we do it on every fetch)
         await PullCommits(project.id);
-        await indexGithubRepo(project.id, repoUrl, token);
+        // await indexGithubRepo(project.id, repoUrl, token);
 
         // Now fetch the latest commits from the DB
         const commits = await ctx.db.commit.findMany({

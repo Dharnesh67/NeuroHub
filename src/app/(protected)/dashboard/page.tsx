@@ -6,6 +6,7 @@ import Link from "next/link";
 import CommitLogs from "./commit-log";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import AskQuestion from "./AskQuestion";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -158,25 +159,9 @@ const Page = () => {
           {/* Middle Section */}
           <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Ask Question Card */}
-            <div className="bg-card flex h-96 flex-col rounded-2xl border border-muted/40 p-6 shadow-lg transition-all hover:shadow-xl">
-              <div className="text-primary mb-4 text-xl font-semibold flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                <span>Ask a Question</span>
-                <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-xs font-mono">Beta</span>
-              </div>
-              <div className="text-muted-foreground bg-muted/20 flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-primary/20 p-6 text-center">
-                <div className="max-w-xs space-y-2">
-                  <span className="text-lg font-medium">Have questions about the project?</span>
-                  <p className="text-sm text-muted-foreground/80">
-                    Ask your team members anything related to the project and get quick responses.
-                  </p>
-                </div>
-              </div>
-              <button className="bg-primary hover:bg-primary/90 mt-6 self-end rounded-lg px-5 py-2 text-sm font-semibold text-white transition shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary/40 active:scale-95">
-                Ask Question
-              </button>
-            </div>
 
+            <AskQuestion/>
+            
             {/* Upcoming Meeting Card */}
             <div className="bg-card flex h-96 flex-col rounded-2xl border border-muted/40 p-6 shadow-lg transition-all hover:shadow-xl">
               <div className="text-primary mb-4 text-xl font-semibold flex items-center gap-2">
