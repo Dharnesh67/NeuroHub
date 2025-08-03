@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Loader2, Sparkles,  XIcon } from "lucide-react";
 import {
   Dialog,
   DialogHeader,
@@ -9,60 +9,90 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { AskQuestion as AskQuestionAction } from "./action";
+import useProject from "@/hooks/use-projects";
+import CodeReference from "./CodeReference";
 
 const AskQuestion = () => {
   const [question, setQuestion] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [open, setOpen] = useState(false);
+  const [response, setResponse] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [fileReferences, setFileReferences] = useState<any[]>([]);
+  const { projectId } = useProject();
 
-  // The dialog is not working because it has no DialogContent, DialogFooter, or any visible content inside.
-  // The Dialog component only renders a header, so nothing is shown in the dialog body.
-  // Also, there is no way to close the dialog except programmatically.
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!question.trim() || !projectId) return;
+
     setSubmitting(true);
+    setIsStreaming(true);
+    setResponse("");
+    setFileReferences([]);
     setOpen(true);
-    // Simulate submission
-    setTimeout(() => {
-      setQuestion("");
+
+    try {
+      const result = await AskQuestionAction(question, projectId);
+
+      // Handle the streaming response
+      if (result.output && result.output instanceof ReadableStream) {
+        const reader = result.output.getReader();
+        const decoder = new TextDecoder();
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            setResponse((prev) => prev + chunk);
+          }
+        } finally {
+          reader.releaseLock();
+        }
+      }
+
+      // Set file references if available
+      if (result.fileReferences) {
+        setFileReferences(result.fileReferences);
+      }
+    } catch (error) {
+      console.error("Error asking question:", error);
+      setResponse(
+        "Sorry, there was an error processing your question. Please try again.",
+      );
+    } finally {
       setSubmitting(false);
-    }, 1000);
+      setIsStreaming(false);
+    }
   };
 
   const handleClose = () => {
+    setOpen(false);
+    setResponse("");
+    setFileReferences([]);
+  };
+
+  const handleNewQuestion = () => {
+    setQuestion("");
+    setResponse("");
+    setFileReferences([]);
     setOpen(false);
   };
 
   return (
     <div className="bg-card border-muted/40 flex h-96 flex-col rounded-2xl border p-6 shadow-lg transition-all hover:shadow-xl">
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              <picture>
-              <Image
-              src="/logo.svg"
-              alt="NeuroHub logo"
-              width={28}
-              height={28}
-              className="sm:w-9 sm:h-9"
-              priority
-            />
-              </picture>
-
-            </DialogTitle>
-          </DialogHeader>
-          <div className="mb-4">
-            <p>Have questions about the project?
-          Ask your team members anything related to the project and get quick
-              responses.</p>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleClose}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CodeReference
+        open={open}
+        setOpen={setOpen}
+        question={question}
+        response={response}
+        isStreaming={isStreaming}
+        fileReferences={fileReferences}
+        handleNewQuestion={handleNewQuestion}
+        handleClose={handleClose}
+      />
       <div className="text-primary mb-4 flex items-center gap-2 text-xl font-semibold">
         <MessageSquare className="h-5 w-5" />
         <span>Ask a Question</span>
@@ -70,6 +100,7 @@ const AskQuestion = () => {
           Beta
         </span>
       </div>
+
       <form
         onSubmit={handleSubmit}
         className="flex h-full flex-1 flex-col justify-between"
@@ -87,10 +118,17 @@ const AskQuestion = () => {
         />
         <button
           type="submit"
-          className="bg-primary hover:bg-primary/90 focus:ring-primary/40 mt-4 self-end rounded-lg px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:shadow-lg focus:ring-2 focus:outline-none active:scale-95 disabled:opacity-60"
-          disabled={submitting || question.trim() === ""}
+          className="bg-primary hover:bg-primary/90 focus:ring-primary/40 mt-4 self-end rounded-lg px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:shadow-lg focus:ring-2 focus:outline-none active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={submitting || question.trim() === "" || !projectId}
         >
-          {submitting ? "Submitting..." : "Submit"}
+          {submitting ? (
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Processing...
+            </div>
+          ) : (
+            "Submit"
+          )}
         </button>
       </form>
     </div>

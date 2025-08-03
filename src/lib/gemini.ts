@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { CommitDetail } from "./github";
 import { Document } from "langchain/document";
@@ -224,3 +225,10 @@ ${code}
     return "";
   }
 }
+
+
+
+// const { text } = await generateText({
+//   model: google('gemini-1.5-pro-latest'),
+//   prompt: 'Write a vegetarian lasagna recipe for 4 people.',
+// });

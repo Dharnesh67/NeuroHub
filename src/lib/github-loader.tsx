@@ -61,7 +61,7 @@ export const GithubLoader = async (repoUrl: string, githubToken: string) => {
   return docs;
 };
 
-const getEmbeddings = async (docs: Document[]) => {
+const getEmbeddings = async (docs: Document[], projectId: string) => {
   const results = [];
 
   for (let i = 0; i < docs.length; i++) {
@@ -71,16 +71,31 @@ const getEmbeddings = async (docs: Document[]) => {
       continue;
     }
 
+    const fileName = doc.metadata?.source ?? "";
+    
+    // Check if embedding for this file already exists in the database
+    const existingEmbedding = await db.sourceembedding.findFirst({
+      where: {
+        projectId,
+        fileName: fileName,
+      },
+    });
+
+    if (existingEmbedding) {
+      console.log(`Skipping ${fileName} - already exists in database`);
+      continue;
+    }
+
     let summary = "";
     let embedding: any[] = [];
     try {
       console.log(
-        `Processing document ${i + 1}/${docs.length}: ${doc.metadata?.source || "unknown"}`,
+        `Processing document ${i + 1}/${docs.length}: ${fileName}`,
       );
       summary = await summariseCode(doc);
     } catch (error) {
       console.error(`Error generating summary for document ${i + 1}:`, error);
-      summary = `File: ${doc.metadata?.source || "unknown"}\n• Code summary unavailable (summary error).`;
+      summary = `File: ${fileName}\n• Code summary unavailable (summary error).`;
     }
 
     try {
@@ -101,7 +116,7 @@ const getEmbeddings = async (docs: Document[]) => {
       summary,
       embedding,
       sourceCode: doc.pageContent,
-      fileName: doc.metadata?.source ?? "",
+      fileName: fileName,
     });
   }
 
@@ -126,7 +141,7 @@ export const indexGithubRepo = async (
     }
 
     // Generate embeddings
-    const allEmbeddings = await getEmbeddings(docs);
+    const allEmbeddings = await getEmbeddings(docs, projectId);
     console.log(`Generated embeddings for ${allEmbeddings.length} documents`);
 
     if (allEmbeddings.length === 0) {
@@ -146,7 +161,7 @@ export const indexGithubRepo = async (
       }
 
       try {
-        console.log(`Storing embedding ${i + 1}/${allEmbeddings.length}`);
+        console.log(`Storing embedding ${i + 1}/${allEmbeddings.length}: ${embedding.fileName}`);
 
         // Create the SourceCodeEmbedding row using the correct model name
         const sourceCodeEmbedding = await db.sourceembedding.create({

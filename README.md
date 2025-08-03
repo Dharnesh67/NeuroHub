@@ -16,6 +16,11 @@
 
 // pnpm add langchain
 
+//npm i @ai-sdk/google
+//npm i ai
+
+I don't see any syntax highlighting library installed. Let me install prismjs for syntax highlighting and update the CodeViewer component:
+
 
 
 

@@ -42,7 +42,7 @@ const CommitLogs = () => {
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="rounded-xl border border-gray-200 bg-gradient-to-r from-white to-gray-50 p-6 shadow-lg dark:border-gray-800 dark:from-[#0d1117] dark:to-[#161b22]"
+            className="rounded-xl border border-border bg-card p-6 shadow-lg"
           >
             <div className="flex items-start gap-4">
               <Skeleton className="h-12 w-12 rounded-full" />
@@ -61,14 +61,14 @@ const CommitLogs = () => {
   if (!projectId) {
     return (
       <div className="text-muted-foreground flex flex-col items-center justify-center space-y-4 py-16">
-        <div className="rounded-full bg-gradient-to-br from-blue-50 to-indigo-100 p-6 dark:from-blue-900/20 dark:to-indigo-900/20">
-          <GitCommit className="h-12 w-12 text-blue-600 dark:text-blue-400" />
+        <div className="rounded-full bg-primary/10 p-6">
+          <GitCommit className="h-12 w-12 text-primary" />
         </div>
         <div className="space-y-2 text-center">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <h3 className="text-lg font-semibold text-foreground">
             No project
           </h3>
-          <p className="text-md text-gray-600 dark:text-gray-400">
+          <p className="text-md text-muted-foreground">
             Select a project to see commits
           </p>
         </div>
@@ -89,14 +89,14 @@ const CommitLogs = () => {
   if (!commitsQuery.data?.length) {
     return (
       <div className="text-muted-foreground flex flex-col items-center justify-center space-y-4 py-16">
-        <div className="rounded-full bg-gradient-to-br from-blue-50 to-indigo-100 p-6 dark:from-blue-900/20 dark:to-indigo-900/20">
-          <GitCommit className="h-12 w-12 text-blue-600 dark:text-blue-400" />
+        <div className="rounded-full bg-primary/10 p-6">
+          <GitCommit className="h-12 w-12 text-primary" />
         </div>
         <div className="space-y-2 text-center">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <h3 className="text-lg font-semibold text-foreground">
             No commits
           </h3>
-          <p className="text-md text-gray-600 dark:text-gray-400">
+          <p className="text-md text-muted-foreground">
             No commits in this project
           </p>
         </div>
@@ -107,12 +107,12 @@ const CommitLogs = () => {
   return (
     <div className="space-y-6">
       <div className="mb-6 flex items-center gap-3">
-        <GitCommit className="h-6 w-6 text-gray-700 dark:text-gray-200" />
+        <GitCommit className="h-6 w-6 text-foreground" />
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+          <h2 className="text-xl font-semibold text-foreground">
             Commits
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-muted-foreground">
             {commitsQuery.data.length} total
           </p>
         </div>
@@ -132,46 +132,46 @@ const CommitLogs = () => {
         return (
           <div
             key={id}
-            className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900"
+            className="rounded-lg border border-border bg-card p-4"
             style={{
               fontFamily:
                 "ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace",
             }}
           >
             <div className="flex items-start gap-4">
-              <Avatar className="h-10 w-10 border border-gray-200 dark:border-gray-700">
+              <Avatar className="h-10 w-10 border border-border">
                 <AvatarImage src={commitAuthorAvatar} />
-                <AvatarFallback className="bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                <AvatarFallback className="bg-muted text-muted-foreground">
                   <User className="h-5 w-5" />
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  <span className="text-sm font-medium text-foreground">
                     {commitAuthorName}
                   </span>
-                  <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock className="h-4 w-4" />
                     <span>{timeAgo(commitDate.toString())}</span>
                   </div>
-                  <span className="flex items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 py-0.5 font-mono text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                  <span className="flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
                     <Hash className="h-3 w-3" />
                     {commitHash.slice(0, 7)}
                   </span>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-start gap-2">
-                    <MessageSquare className="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-500 dark:text-gray-400" />
-                    <span className="text-sm leading-relaxed break-words text-gray-800 dark:text-gray-200">
+                    <MessageSquare className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                    <span className="text-sm leading-relaxed break-words text-foreground">
                       {commitMessage}
                     </span>
                   </div>
                   {Summary && (
-                    <div className="ml-6 rounded border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
-                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    <div className="ml-6 rounded border border-border bg-muted p-3">
+                      <span className="text-sm font-semibold text-foreground">
                         Summary
                       </span>
-                      <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
+                      <p className="mt-1 text-sm text-muted-foreground">
                         {Summary}
                       </p>
                     </div>
