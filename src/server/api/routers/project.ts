@@ -5,11 +5,14 @@ import { z } from "zod";
 
 // Enhanced input validation schemas
 const createProjectSchema = z.object({
-  name: z.string().min(1, "Project name is required").max(100, "Project name too long"),
-  githubUrl: z.string().url("Invalid GitHub URL").refine(
-    (url) => url.includes("github.com"),
-    "Must be a valid GitHub URL"
-  ),
+  name: z
+    .string()
+    .min(1, "Project name is required")
+    .max(100, "Project name too long"),
+  githubUrl: z
+    .string()
+    .url("Invalid GitHub URL")
+    .refine((url) => url.includes("github.com"), "Must be a valid GitHub URL"),
   githubToken: z.string().optional(),
 });
 
@@ -39,7 +42,9 @@ export const projectRouter = createTRPCRouter({
         });
 
         if (existingProject) {
-          throw new Error("Project with this GitHub URL already exists for your account");
+          throw new Error(
+            "Project with this GitHub URL already exists for your account",
+          );
         }
 
         // Create the project
@@ -72,20 +77,30 @@ export const projectRouter = createTRPCRouter({
         (async () => {
           try {
             await PullCommits(project.id);
-            await indexGithubRepo(project.id, input.githubUrl, input.githubToken || "");
+            await indexGithubRepo(
+              project.id,
+              input.githubUrl,
+              input.githubToken || "",
+            );
           } catch (error) {
-            console.error(`Background commit processing or indexing failed for project ${project.id}:`, error);
+            console.error(
+              `Background commit processing or indexing failed for project ${project.id}:`,
+              error,
+            );
           }
         })();
 
         return {
           success: true,
           project,
-          message: "Project created successfully. Commits and codebase are being processed in the background.",
+          message:
+            "Project created successfully. Commits and codebase are being processed in the background.",
         };
       } catch (error) {
         console.error("Error creating project:", error);
-        throw new Error(error instanceof Error ? error.message : "Failed to create project");
+        throw new Error(
+          error instanceof Error ? error.message : "Failed to create project",
+        );
       }
     }),
 
@@ -162,7 +177,9 @@ export const projectRouter = createTRPCRouter({
         return project;
       } catch (error) {
         console.error("Error fetching project:", error);
-        throw new Error(error instanceof Error ? error.message : "Failed to fetch project");
+        throw new Error(
+          error instanceof Error ? error.message : "Failed to fetch project",
+        );
       }
     }),
 
@@ -188,11 +205,7 @@ export const projectRouter = createTRPCRouter({
         const pullResult = await PullCommits(input.projectId);
 
         // Also re-index the codebase to ensure new code is indexed
-        await indexGithubRepo(
-          input.projectId,
-          project.githubUrl,
-          ""
-        );
+        await indexGithubRepo(input.projectId, project.githubUrl, "");
 
         return {
           success: true,
@@ -202,7 +215,9 @@ export const projectRouter = createTRPCRouter({
         };
       } catch (error) {
         console.error("Error refreshing commits:", error);
-        throw new Error(error instanceof Error ? error.message : "Failed to refresh commits");
+        throw new Error(
+          error instanceof Error ? error.message : "Failed to refresh commits",
+        );
       }
     }),
 
@@ -235,7 +250,9 @@ export const projectRouter = createTRPCRouter({
         };
       } catch (error) {
         console.error("Error deleting project:", error);
-        throw new Error(error instanceof Error ? error.message : "Failed to delete project");
+        throw new Error(
+          error instanceof Error ? error.message : "Failed to delete project",
+        );
       }
     }),
 
@@ -265,7 +282,11 @@ export const projectRouter = createTRPCRouter({
         };
       } catch (error) {
         console.error("Error fetching project stats:", error);
-        throw new Error(error instanceof Error ? error.message : "Failed to fetch project stats");
+        throw new Error(
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch project stats",
+        );
       }
     }),
 
@@ -309,8 +330,76 @@ export const projectRouter = createTRPCRouter({
         return commits;
       } catch (error) {
         console.error("Error fetching project commits:", error);
-        throw new Error(error instanceof Error ? error.message : "Failed to fetch project commits");
+        throw new Error(
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch project commits",
+        );
+      }
+    }),
+  saveAnswers: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.string(),
+        question: z.string(),
+        answer: z.string(),
+        fileReferences: z.any().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Verify project ownership
+        const project = await ctx.db.project.findFirst({
+          where: {
+            id: input.projectId,
+            UsertoProject: {
+              some: { userId: ctx.user.userId! },
+            },
+          },
+        });
+
+        if (!project) {
+          throw new Error("Project not found or access denied");
+        }
+
+        // Save the question and answer in the database
+        const savedQuestion = await ctx.db.Question.create({
+          data: {
+            question: input.question,
+            answer: input.answer,
+            fileReferences: input.fileReferences ?? null,
+            projectId: input.projectId,
+            userId: ctx.user.userId!,
+          },
+        });
+
+        return {
+          success: true,
+          savedQuestion,
+          message: "Response saved successfully",
+        };
+      } catch (error) {
+        console.error("Error saving answer:", error);
+        throw new Error(
+          error instanceof Error ? error.message : "Failed to save answer",
+        );
+      }
+    }),
+  getProjectsQuestions: protectedProcedure
+    .input(projectIdSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        const questions = await ctx.db.question.findMany({
+          where: { projectId: input.projectId },
+        });
+        return questions;
+      } catch (error) {
+        console.error("Error fetching project questions:", error);
+        throw new Error(
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch project questions",
+        );
       }
     }),
 });
-

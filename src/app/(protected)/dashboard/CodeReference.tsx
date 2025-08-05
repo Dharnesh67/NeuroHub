@@ -1,15 +1,19 @@
 import React, { useState } from "react";
-import { Loader2, Sparkles, XIcon, Code, FileText } from "lucide-react";
 import {
-  Dialog,
-  DialogHeader,
-  DialogTitle,
-  DialogContent,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Loader2,
+  Sparkles,
+  XIcon,
+  Code,
+  FileText,
+  Save,
+  Check,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import CodeViewer from "./CodeViewer";
+import { api } from "@/trpc/react";
+import useProject from "@/hooks/use-projects";
+import { toast } from "sonner";
 
 interface CodeReferenceProps {
   open: boolean;
@@ -33,31 +37,63 @@ const CodeReference: React.FC<CodeReferenceProps> = ({
   handleClose,
 }) => {
   const [showCodeViewer, setShowCodeViewer] = useState(false);
+  const [selectedFileIndex, setSelectedFileIndex] = useState<number | null>(null);
+  const { projectId } = useProject();
 
-  const handleFileClick = () => {
+  const saveAnswersMutation = api.project.saveAnswers.useMutation({
+    onSuccess: () => {
+      toast.success("Response saved successfully");
+    },
+    onError: (error) => {
+      toast.error("Error saving response");
+    },
+  });
+
+  const handleFileClick = (fileIndex: number) => {
+    setSelectedFileIndex(fileIndex);
     setShowCodeViewer(true);
   };
 
   const closeCodeViewer = () => {
     setShowCodeViewer(false);
+    setSelectedFileIndex(null);
   };
 
+  const handleSaveResponse = () => {
+    if (!projectId || !question || !response) return;
+
+    saveAnswersMutation.mutate({
+      projectId,
+      question,
+      answer: response,
+      fileReferences,
+    });
+  };
+
+  // Get the files to show in CodeViewer - either all files or just the selected one
+  const getFilesToShow = () => {
+    if (selectedFileIndex !== null) {
+      return [fileReferences[selectedFileIndex]];
+    }
+    return fileReferences;
+  };
+
+  if (!open) return null;
+
   return (
-    <div>
-      {/* Custom Dialog Box */}
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          style={{ transition: "background 0.2s" }}
-        >
-          <div className="relative w-full max-w-7xl mx-auto bg-gradient-to-br from-card/90 to-muted/30 rounded-2xl shadow-2xl border-0 overflow-hidden flex flex-col"
-            style={{
-              maxHeight: "90dvh",
-              minHeight: "60dvh",
-            }}
-          >
-            {/* Header */}
-            <div className="bg-card/90 border-muted/30 sticky top-0 z-10 rounded-t-2xl border-b px-6 py-4 backdrop-blur-lg flex items-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={() => setOpen(false)}
+      />
+
+      {/* Custom Modal */}
+      <div className="from-card/95 to-muted/30 border-muted/30 relative h-[95vh] max-h-[95vh] w-[98vw] max-w-[2000px] overflow-hidden rounded-2xl border bg-gradient-to-br shadow-2xl backdrop-blur-sm">
+        {/* Header */}
+        <div className="bg-card/90 border-muted/30 sticky top-0 z-10 border-b px-6 py-4 backdrop-blur-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 text-lg font-bold">
               <Image
                 src="/logo.svg"
                 alt="NeuroHub logo"
@@ -66,116 +102,42 @@ const CodeReference: React.FC<CodeReferenceProps> = ({
                 className="drop-shadow-md transition-transform hover:scale-105 sm:h-10 sm:w-10"
                 priority
               />
-              <span className="from-primary to-primary/70 bg-gradient-to-r bg-clip-text text-transparent text-lg font-bold ml-3">
+              <span className="from-primary to-primary/70 bg-gradient-to-r bg-clip-text text-transparent">
                 AI Assistant Response
               </span>
-              <button
-                onClick={handleClose}
-                className="absolute right-6 top-4 text-muted-foreground hover:text-primary transition"
-                aria-label="Close"
+            </div>
+            <div className="flex items-center gap-4">
+              {/* Save Response Button */}
+              <Button
+                variant="outline"
+                onClick={handleSaveResponse}
+                disabled={
+                  isStreaming ||
+                  !question ||
+                  !response ||
+                  !projectId ||
+                  saveAnswersMutation.isPending
+                }
+                className={`font-semibold transition-all hover:-translate-y-0.5 hover:shadow ${
+                  saveAnswersMutation.isPending
+                    ? "border-green-500 text-green-500"
+                    : ""
+                }`}
               >
-                <XIcon className="h-6 w-6" />
-              </button>
-            </div>
+                {saveAnswersMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : saveAnswersMutation.isSuccess ? (
+                  <Check className="mr-2 h-4 w-4" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
+                {saveAnswersMutation.isPending
+                  ? "Saving..."
+                  : saveAnswersMutation.isSuccess
+                    ? "Saved!"
+                    : "Save Response"}
+              </Button>
 
-            {/* Content */}
-            <div className="scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent flex-1 flex flex-col gap-4 overflow-y-auto px-6 py-4">
-              {/* Question Display */}
-              <div className="bg-muted/20 border-muted/30 hover:border-muted-foreground/30 rounded-xl border p-4 shadow-sm transition-all hover:shadow-md">
-                <p className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-wider uppercase">
-                  Question
-                </p>
-                <p className="text-primary text-base leading-relaxed font-medium">
-                  {question}
-                </p>
-              </div>
-
-              {/* File References */}
-              {fileReferences?.length > 0 && (
-                <div className="from-muted/20 to-muted/5 border-muted/30 mt-4 rounded-2xl border bg-gradient-to-br p-5 shadow-lg transition-all hover:shadow-xl">
-                  <div className="mb-3 flex items-center gap-2">
-                    <span className="bg-primary/10 text-primary mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full">
-                      <svg width="16" height="16" fill="none" viewBox="0 0 16 16">
-                        <path
-                          d="M8 1.5l2.09 4.24 4.66.68-3.38 3.29.8 4.65L8 11.77l-4.17 2.19.8-4.65-3.38-3.29 4.66-.68L8 1.5z"
-                          stroke="currentColor"
-                          strokeWidth="1.2"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </span>
-                    <p className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-                      Referenced Files
-                      <span className="bg-primary/10 text-primary ml-2 rounded px-2 py-0.5 font-mono text-[11px] font-semibold">
-                        {fileReferences?.length}
-                      </span>
-                    </p>
-                  </div>
-                  <div className="max-h-56 space-y-4 overflow-y-auto pr-2">
-                    {fileReferences?.map((file: any, index: number) => (
-                      <div
-                        key={index}
-                        className="group bg-background border-muted/20 hover:border-primary/40 rounded-xl border p-4 text-xs shadow-sm transition-all hover:shadow-md cursor-pointer"
-                        onClick={handleFileClick}
-                      >
-                        <div className="mb-1 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="bg-primary/10 text-primary rounded px-2 py-0.5 font-mono text-[10px] font-semibold">
-                              {(file.similarity * 100).toFixed(1)}% match
-                            </span>
-                            <span className="text-primary max-w-[10rem] truncate font-semibold group-hover:underline flex items-center gap-1">
-                              <FileText className="h-3 w-3" />
-                              {file.fileName}
-                            </span>
-                          </div>
-                          <Code className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </div>
-                        <p className="text-muted-foreground mt-1 line-clamp-3 text-xs/relaxed">
-                          {file.summary}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Source Code Viewer */}
-              {showCodeViewer && fileReferences?.length > 0 && (
-                <CodeViewer
-                  files={fileReferences}
-                  onClose={closeCodeViewer}
-                />
-              )}
-
-              {/* Response Area */}
-              <div className="flex-1 overflow-y-auto">
-                <div className="bg-background border-muted/30 rounded-xl border p-4 shadow-sm transition-all hover:shadow-md">
-                  <p className="text-muted-foreground mb-2.5 text-xs font-semibold tracking-wider uppercase">
-                    Response
-                  </p>
-                  <div className="prose prose-sm max-w-none">
-                    {isStreaming && !response && (
-                      <div className="text-muted-foreground flex animate-pulse items-center gap-3">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-sm">Generating response...</span>
-                      </div>
-                    )}
-                    {response && (
-                      <div
-                        className="animate-fade-in text-sm leading-relaxed whitespace-pre-wrap"
-                        style={{ wordBreak: "break-word" }}
-                        dangerouslySetInnerHTML={{
-                          __html: response.replace(/\n/g, "<br/>"),
-                        }}
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="bg-card/90 border-muted/30 sticky bottom-0 z-10 flex gap-3 rounded-b-2xl border-t px-6 py-4 backdrop-blur-lg">
               <Button
                 variant="outline"
                 onClick={handleNewQuestion}
@@ -194,7 +156,150 @@ const CodeReference: React.FC<CodeReferenceProps> = ({
             </div>
           </div>
         </div>
-      )}
+
+        {/* Content */}
+        <div className="flex h-[calc(95vh-140px)] gap-4 px-6 py-4">
+          {/* Main Content - Question and Response */}
+          <div className={`flex flex-col gap-4 overflow-y-auto ${showCodeViewer ? 'w-1/2' : 'w-full'} transition-all duration-300`}>
+            {/* Question Display */}
+            <div className="bg-muted/20 border-muted/30 hover:border-muted-foreground/30 rounded-xl border p-4 shadow-sm transition-all hover:shadow-md">
+              <p className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-wider uppercase">
+                Question
+              </p>
+              <p className="text-primary text-base leading-relaxed font-medium">
+                {question}
+              </p>
+            </div>
+            
+            {/* Response Area */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="bg-background border-muted/30 rounded-xl border p-4 shadow-sm transition-all hover:shadow-md">
+                <p className="text-muted-foreground mb-2.5 text-xs font-semibold tracking-wider uppercase">
+                  Response
+                </p>
+                <div className="prose prose-sm max-w-none">
+                  {isStreaming && !response && (
+                    <div className="text-muted-foreground flex animate-pulse items-center gap-3">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="text-sm">Generating response...</span>
+                    </div>
+                  )}
+                  {response && (
+                    <div
+                      className="animate-fade-in text-sm leading-relaxed whitespace-pre-wrap"
+                      style={{ wordBreak: "break-word" }}
+                      dangerouslySetInnerHTML={{
+                        __html: response.replace(/\n/g, "<br/>"),
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* File References */}
+            {fileReferences?.length > 0 && (
+              <div className="from-muted/20 to-muted/5 border-muted/30 rounded-2xl border bg-gradient-to-br p-5 shadow-lg transition-all hover:shadow-xl">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-primary/10 text-primary mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full">
+                      <svg width="16" height="16" fill="none" viewBox="0 0 16 16">
+                        <path
+                          d="M8 1.5l2.09 4.24 4.66.68-3.38 3.29.8 4.65L8 11.77l-4.17 2.19.8-4.65-3.38-3.29 4.66-.68L8 1.5z"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                    <p className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+                      Referenced Files
+                      <span className="bg-primary/10 text-primary ml-2 rounded px-2 py-0.5 font-mono text-[11px] font-semibold">
+                        {fileReferences?.length}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {showCodeViewer && selectedFileIndex !== null && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedFileIndex(null);
+                          setShowCodeViewer(true);
+                        }}
+                        className="text-xs"
+                        title="Show all files"
+                      >
+                        <FileText className="mr-1 h-3 w-3" />
+                        All Files
+                      </Button>
+                    )}
+                    {showCodeViewer && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={closeCodeViewer}
+                        className="text-xs"
+                      >
+                        <XIcon className="mr-1 h-3 w-3" />
+                        Close Viewer
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="max-h-56 space-y-4 overflow-y-auto pr-2">
+                  {fileReferences?.map((file: any, index: number) => (
+                    <div
+                      key={index}
+                      className={`group bg-background border-muted/20 hover:border-primary/40 cursor-pointer rounded-xl border p-4 text-xs shadow-sm transition-all hover:shadow-md ${
+                        showCodeViewer ? 'opacity-60 hover:opacity-100' : ''
+                      } ${
+                        selectedFileIndex === index ? 'border-primary/60 bg-primary/5' : ''
+                      }`}
+                      onClick={() => handleFileClick(index)}
+                    >
+                      <div className="mb-1 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="bg-primary/10 text-primary rounded px-2 py-0.5 font-mono text-[10px] font-semibold">
+                            {(file.similarity * 100).toFixed(1)}% match
+                          </span>
+                          <span className="text-primary flex max-w-[15rem] items-center gap-1 truncate font-semibold group-hover:underline">
+                            <FileText className="h-3 w-3" />
+                            {file.fileName}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {selectedFileIndex === index && showCodeViewer && (
+                            <span className="bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 text-[10px] font-semibold">
+                              Active
+                            </span>
+                          )}
+                          <Code className="text-muted-foreground h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
+                        </div>
+                      </div>
+                      <p className="text-muted-foreground mt-1 line-clamp-3 text-xs/relaxed">
+                        {file.summary}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Code Viewer Side Panel */}
+          {showCodeViewer && fileReferences?.length > 0 && (
+            <div className="w-1/2 overflow-y-auto">
+              <CodeViewer 
+                files={getFilesToShow()} 
+                onClose={closeCodeViewer}
+                initialFileIndex={selectedFileIndex !== null ? 0 : undefined}
+              />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

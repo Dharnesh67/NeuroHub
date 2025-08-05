@@ -1,8 +1,6 @@
 # NeuroHub – AI Codebase Assistant
 
-
-
-  [![Demo Video](https://img.shields.io/badge/Demo-Video-blue?logo=playstation)](./Demo.mp4)
+[![Demo Video](https://img.shields.io/badge/Demo-Video-blue?logo=playstation)](./Demo.mp4)
 
 // To install langchain, run the following command in your terminal:
 
@@ -21,19 +19,17 @@
 
 I don't see any syntax highlighting library installed. Let me install prismjs for syntax highlighting and update the CodeViewer component:
 
-
-
+![image](https://github.com/Dharnesh67/NeuroHub/assets/101101010/1234567890)
 
 Document{
-//     pageContent: string;
-//     metadata: {
-//         source: string;
-//         commit: string;
-//         path: string;
-//         line: number;
-//     };
+// pageContent: string;
+// metadata: {
+// source: string;
+// commit: string;
+// path: string;
+// line: number;
+// };
 // }
-
 
 PS C:\Users\Dharmesh raikwar\Desktop\NeuroHub> npm install @langchain/community @langchain/core ignore
 npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
@@ -41,10 +37,9 @@ npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMExcep
 added 146 packages, and audited 718 packages in 1m
 
 177 packages are looking for funding
-  run `npm fund` for details
+run `npm fund` for details
 
 found 0 vulnerabilities
-
 
 npm install @google/genai
 https://dev.to/saminarp/today-i-learned-using-octokit-2bdm

@@ -35,6 +35,7 @@ model User {
     hashedPassword String?
     Credits Int @default(100)
     UsertoProject UsertoProject[]
+    QuestionAsked Question[]
 }
 
 
@@ -49,6 +50,7 @@ model Project{
     UsertoProject UsertoProject[]
     commit commit[]
     sourceembedding sourceembedding[]
+    SavedQuestions Question[]
 }
 
 
@@ -90,4 +92,18 @@ model sourceembedding {
     sourceCode String
     fileName String
     summary String
+}
+
+
+model Question {
+    id        String   @id @default(uuid())
+    question String
+    answer String
+    fileReferences Json?
+    projectId String
+    project Project @relation(fields: [projectId], references: [id])
+    userId String
+    user User @relation(fields: [userId], references: [id])
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }

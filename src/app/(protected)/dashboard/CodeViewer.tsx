@@ -14,10 +14,11 @@ interface FileReference {
 interface CodeViewerProps {
   files: FileReference[];
   onClose: () => void;
+  initialFileIndex?: number;
 }
 
-const CodeViewer: React.FC<CodeViewerProps> = ({ files, onClose }) => {
-  const [currentFileIndex, setCurrentFileIndex] = useState(0);
+const CodeViewer: React.FC<CodeViewerProps> = ({ files, onClose, initialFileIndex }) => {
+  const [currentFileIndex, setCurrentFileIndex] = useState(initialFileIndex ?? 0);
   const [copied, setCopied] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
 
@@ -32,6 +33,13 @@ const CodeViewer: React.FC<CodeViewerProps> = ({ files, onClose }) => {
       }, 0);
     }
   }, [currentFileIndex, currentFile]);
+
+  // Update currentFileIndex when initialFileIndex changes
+  useEffect(() => {
+    if (initialFileIndex !== undefined && initialFileIndex >= 0 && initialFileIndex < files.length) {
+      setCurrentFileIndex(initialFileIndex);
+    }
+  }, [initialFileIndex, files.length]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

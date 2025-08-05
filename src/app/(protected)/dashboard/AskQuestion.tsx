@@ -1,14 +1,6 @@
+"use client";
 import React, { useState } from "react";
-import { MessageSquare, Loader2, Sparkles,  XIcon } from "lucide-react";
-import {
-  Dialog,
-  DialogHeader,
-  DialogTitle,
-  DialogContent,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import Image from "next/image";
+import { MessageSquare, Loader2 } from "lucide-react";
 import { AskQuestion as AskQuestionAction } from "./action";
 import useProject from "@/hooks/use-projects";
 import CodeReference from "./CodeReference";
@@ -82,7 +74,7 @@ const AskQuestion = () => {
   };
 
   return (
-    <div className="bg-card border-muted/40 flex h-96 flex-col rounded-2xl border p-6 shadow-lg transition-all hover:shadow-xl">
+    <div className="bg-card border-muted-foreground flex  flex-col rounded-2xl border p-6 shadow-lg transition-all hover:shadow-xl">
       <CodeReference
         open={open}
         setOpen={setOpen}
@@ -97,7 +89,7 @@ const AskQuestion = () => {
         <MessageSquare className="h-5 w-5" />
         <span>Ask a Question</span>
         <span className="bg-primary/10 text-primary rounded px-2 py-0.5 font-mono text-xs">
-          Beta
+          NeuroHub
         </span>
       </div>
 
@@ -106,7 +98,7 @@ const AskQuestion = () => {
         className="flex h-full flex-1 flex-col justify-between"
       >
         <textarea
-          className="text-muted-foreground bg-muted/20 border-primary/20 focus:ring-primary/20 mb-4 flex h-full resize-none flex-col items-center justify-center rounded-xl border border-dashed p-6 transition focus:ring-2 focus:outline-none"
+          className="text-muted-foreground bg-muted/20 border-primary/20 focus:ring-primary/20 mb-4 flex h-full  flex-col items-center justify-center rounded-xl border border-dashed p-6 transition focus:ring-2 focus:outline-none"
           rows={3}
           placeholder="Have questions about the project?
           Ask your team members anything related to the project and get quick

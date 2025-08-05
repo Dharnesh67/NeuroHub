@@ -163,28 +163,7 @@ const AppSidebar = () => {
           </button>
         </div>
 
-        {/* Sidebar Header */}
-        <div className="flex items-center gap-3 border-b border-border px-4 py-3 sm:px-6 sm:py-4">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-2 sm:gap-3 cursor-pointer"
-            aria-label="Go to dashboard"
-          >
-            <Image
-              src="/logo.svg"
-              alt="NeuroHub logo"
-              width={28}
-              height={28}
-              className="sm:w-9 sm:h-9"
-              priority
-            />
-            {!isCollapsed && (
-              <span className="text-lg sm:text-xl lg:text-2xl font-bold tracking-tight text-foreground">
-                NeuroHub
-              </span>
-            )}
-          </Link>
-        </div>
+       
 
         {/* Sidebar Content */}
         <nav className="flex flex-1 flex-col overflow-y-auto px-2 py-2 sm:py-4">
