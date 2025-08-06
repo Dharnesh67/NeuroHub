@@ -1,6 +1,4 @@
-Here’s a polished, structured, and comprehensive `README.md` for **NeuroHub** that merges your old and new content seamlessly:  
 
----
 
 # **🧠 NeuroHub – AI-Powered Codebase Assistant**  
 **Accelerate code understanding, streamline meetings, and enhance collaboration with AI.**  
