@@ -106,3 +106,55 @@ neurohub/
 ```
 
 ---
+
+## **🔥 Firebase Setup (Required for File Uploads)**
+
+### **1. Create Firebase Project**
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Create a new project or select existing one
+3. Enable **Storage** in your project
+
+### **2. Get Configuration**
+1. Go to Project Settings → General
+2. Scroll down to "Your apps" section
+3. Copy the configuration values to your `.env` file:
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY="your-api-key"
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="your-project.firebaseapp.com"
+NEXT_PUBLIC_FIREBASE_PROJECT_ID="your-project-id"
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="your-project.firebasestorage.app"
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="your-sender-id"
+NEXT_PUBLIC_FIREBASE_APP_ID="your-app-id"
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="your-measurement-id"
+```
+
+### **3. Configure Storage Rules**
+Add these rules to Firebase Storage:
+```javascript
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /meetings/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+```
+
+### **4. Supported File Types**
+- **Audio**: mp3, wav, m4a, aac, ogg
+- **Video**: mp4, avi, mov, mkv, webm
+- **Documents**: PDF, DOCX, DOC
+- **Text**: txt, md, json
+- **Archives**: ZIP
+- **Max Size**: 100MB
+
+### **5. Troubleshooting Upload Issues**
+- ✅ Check all Firebase environment variables are set
+- ✅ Ensure no extra spaces in configuration values
+- ✅ Verify Storage is enabled in Firebase project
+- ✅ Check browser console for error messages
+- ✅ Test with small files first
+
+---
