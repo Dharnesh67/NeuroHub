@@ -1,88 +1,108 @@
-# NeuroHub – AI Codebase Assistant
 
-[![Demo Video](https://img.shields.io/badge/Demo-Video-blue?logo=playstation)](./Demo.mp4)
 
-// To install langchain, run the following command in your terminal:
+# **🧠 NeuroHub – AI-Powered Codebase Assistant**  
+**Accelerate code understanding, streamline meetings, and enhance collaboration with AI.**  
 
-// npm install langchain
-
-// or if you use yarn:
-
-// yarn add langchain
-
-// or with pnpm:
-
-// pnpm add langchain
-
-//npm i @ai-sdk/google
-//npm i ai
-
-I don't see any syntax highlighting library installed. Let me install prismjs for syntax highlighting and update the CodeViewer component:
-
-![image](https://github.com/Dharnesh67/NeuroHub/assets/101101010/1234567890)
-
-Document{
-// pageContent: string;
-// metadata: {
-// source: string;
-// commit: string;
-// path: string;
-// line: number;
-// };
-// }
-
-PS C:\Users\Dharmesh raikwar\Desktop\NeuroHub> npm install @langchain/community @langchain/core ignore
-npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
-
-added 146 packages, and audited 718 packages in 1m
-
-177 packages are looking for funding
-run `npm fund` for details
-
-found 0 vulnerabilities
-
-npm install @google/genai
-https://dev.to/saminarp/today-i-learned-using-octokit-2bdm
-
-[![GitHub Repo](https://img.shields.io/badge/GitHub-NeuroHub-blue?logo=github)](https://github.com/Dharnesh67/NeuroHub)
-
-NeuroHub is an AI-powered platform designed for collaborative code understanding, smart meeting transcription, and seamless GitHub repository access. Built with the T3 Stack and enhanced by cutting-edge AI and cloud technologies, NeuroHub is trusted by 500+ developers to accelerate codebase comprehension and team productivity.
+[![Demo Video](https://img.shields.io/badge/Demo-Video-blue?logo=playstation)](./Demo.mp4)  
+[![GitHub Repo](https://img.shields.io/badge/GitHub-NeuroHub-blue?logo=github)](https://github.com/Dharnesh67/NeuroHub)  
 
 ---
 
-## 🚀 Features
+## **🚀 Overview**  
+NeuroHub is an AI-powered platform designed for **collaborative code understanding**, **smart meeting transcription**, and **seamless GitHub repository access**. Built with the **T3 Stack** and enhanced by cutting-edge AI, it helps developers:  
+- **Understand codebases 85% faster** with RAG-powered Q&A.  
+- **Extract actionable insights** from meetings using AI transcription.  
+- **Securely access and query** private repositories.  
 
-- **Contextual Q&A & Auto-Summarization**  
-  Leverage RAG (Retrieval-Augmented Generation) techniques with [LangChain](https://python.langchain.com/) and [Gemini API](https://ai.google.dev/gemini-api) for instant codebase insights and 85% faster comprehension.
-
-- **Smart Meeting Transcription & Query Support**  
-  Integrate [AssemblyAI](https://www.assemblyai.com/) for accurate meeting transcription and natural language queries. Over 1,000+ API calls/month tracked with Stripe billing.
-
-- **Secure GitHub Repo Access**  
-  Access private repositories securely using OAuth and the [GitHub API](https://docs.github.com/en/rest). Collaborate on code with confidence.
-
-- **Optimized File Uploads**  
-  Store and retrieve files efficiently with [Firebase Storage](https://firebase.google.com/docs/storage), achieving up to 40% faster upload speeds.
+Trusted by **500+ developers** and integrated with top-tier APIs like Gemini, AssemblyAI, and GitHub.  
 
 ---
 
-## 🛠️ Tech Stack
+## **✨ Key Features**  
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle ORM](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
-- [LangChain](https://python.langchain.com/)
-- [Gemini API](https://ai.google.dev/gemini-api)
-- [GitHub API](https://docs.github.com/en/rest)
-- [Firebase](https://firebase.google.com/)
-- [AssemblyAI](https://www.assemblyai.com/)
-- [Stripe](https://stripe.com)
+### **🔍 Contextual Codebase Q&A**  
+- **RAG-powered search** (LangChain + Gemini) for precise answers.  
+- **File references** show sources for transparency.  
+- **Semantic search** retrieves top 10 relevant results from embeddings.  
+
+### **🎙 Smart Meeting Assistant**  
+- **Drag & drop uploads** → **Firebase Storage** → **AssemblyAI transcription**.  
+- **Auto-generated summaries** with issues, action items, and decisions.  
+
+### **⚡ Real-Time Repository Insights**  
+- **Commit summaries** (Gemini API) with live updates.  
+- **Positivity score** for repo health assessment.  
+- **OAuth-secured GitHub access** for private repos.  
+
+### **🖥 Intuitive Dashboard**  
+- **Dark/light mode**, collapsible sidebar, Clerk authentication.  
+- **Project switching** with real-time sync.  
 
 ---
 
-## 🏁 Getting Started
+## **🛠 Tech Stack**  
+| Category          | Technologies                                                                 |  
+|-------------------|-----------------------------------------------------------------------------|  
+| **Frontend**      | Next.js, TailwindCSS, shadcn/ui                                             |  
+| **Backend**       | tRPC, NextAuth.js, Drizzle ORM                                              |  
+| **AI/ML**         | LangChain, Gemini API, AssemblyAI (STT)                                     |  
+| **Database**      | PostgreSQL (Neon), Firebase Storage, Vector DB (embeddings)                 |  
+| **DevOps**        | GitHub Actions, Vercel                                                      |  
+| **Auth/Payments** | Clerk, Stripe                                                               |  
 
-### 1. Clone the Repository
+---
+
+## **📦 Installation**  
+### **Prerequisites**  
+- Node.js `v18+`, PostgreSQL, Firebase account, Gemini/AssemblyAI API keys.  
+
+### **Setup**  
+```bash
+# Clone the repo
+git clone https://github.com/Dharnesh67/NeuroHub.git
+cd NeuroHub
+
+# Install dependencies
+npm install
+
+# Configure environment variables
+cp .env.example .env  # Fill in your API keys
+
+# Run the app
+npm run dev
+```
+
+---
+
+## **📌 Usage Guide**  
+
+### **1. Upload & Analyze Meetings**  
+1. Drag/drop audio/video → **Firebase Storage**.  
+2. AssemblyAI transcribes content → **issues/summary generated**.  
+3. View insights in the **Meeting Tab**.  
+
+### **2. Query Your Codebase**  
+1. Link a GitHub repo via **OAuth**.  
+2. Ask questions → **RAG retrieves answers** with file references.  
+3. History tracks past queries.  
+
+### **3. Monitor Repository**  
+- **Real-time commit summaries** (Gemini).  
+- **Positivity score** and activity trends.  
+
+---
+
+## **🔧 Project Structure**  
+```plaintext
+neurohub/  
+├── src/  
+│   ├── app/          # Next.js routes  
+│   ├── components/   # UI (dashboard, sidebar)  
+│   ├── lib/          # RAG, embeddings, API calls  
+│   └── server/       # tRPC, auth, database  
+├── prisma/           # Schema (Drizzle/Prisma)  
+├── public/           # Assets  
+└── .env.example      # API keys template  
+```
+
+---
