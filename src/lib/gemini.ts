@@ -110,10 +110,12 @@ Output only the summary, in bullet points.
       return text.trim();
     } catch (error: any) {
       lastError = error;
-      // Retry on rate limit or network errors
+      // Retry on rate limit, service unavailable, or network errors
       if (
         error?.status === 429 ||
+        error?.status === 503 ||
         error?.statusText === "Too Many Requests" ||
+        error?.statusText === "Service Unavailable" ||
         error?.code === "ECONNRESET" ||
         error?.code === "ETIMEDOUT"
       ) {
@@ -192,10 +194,12 @@ ${code}
         return text;
       } catch (error: any) {
         lastError = error;
-        // Check for rate limit (429) or retryable error
+        // Check for rate limit (429), service unavailable (503), or retryable error
         if (
           error?.status === 429 ||
-          error?.statusText === "Too Many Requests"
+          error?.status === 503 ||
+          error?.statusText === "Too Many Requests" ||
+          error?.statusText === "Service Unavailable"
         ) {
           const waitTime = RETRY_DELAY * Math.pow(2, attempt - 1);
           console.warn(
