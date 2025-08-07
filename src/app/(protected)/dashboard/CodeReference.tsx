@@ -14,6 +14,8 @@ import CodeViewer from "./CodeViewer";
 import { api } from "@/trpc/react";
 import useProject from "@/hooks/use-projects";
 import { toast } from "sonner";
+import useRefetch from "@/hooks/use-refetch";
+import { usePathname } from "next/navigation";
 
 interface CodeReferenceProps {
   open: boolean;
@@ -36,13 +38,17 @@ const CodeReference: React.FC<CodeReferenceProps> = ({
   handleNewQuestion,
   handleClose,
 }) => {
+  const path = usePathname();
   const [showCodeViewer, setShowCodeViewer] = useState(false);
-  const [selectedFileIndex, setSelectedFileIndex] = useState<number | null>(null);
+  const [selectedFileIndex, setSelectedFileIndex] = useState<number | null>(
+    null,
+  );
   const { projectId } = useProject();
-
+  const refetch = useRefetch();
   const saveAnswersMutation = api.project.saveAnswers.useMutation({
     onSuccess: () => {
       toast.success("Response saved successfully");
+      refetch();
     },
     onError: (error) => {
       toast.error("Error saving response");
@@ -108,36 +114,37 @@ const CodeReference: React.FC<CodeReferenceProps> = ({
             </div>
             <div className="flex items-center gap-4">
               {/* Save Response Button */}
-              <Button
-                variant="outline"
-                onClick={handleSaveResponse}
-                disabled={
-                  isStreaming ||
-                  !question ||
-                  !response ||
-                  !projectId ||
-                  saveAnswersMutation.isPending
-                }
-                className={`font-semibold transition-all hover:-translate-y-0.5 hover:shadow ${
-                  saveAnswersMutation.isPending
-                    ? "border-green-500 text-green-500"
-                    : ""
-                }`}
-              >
-                {saveAnswersMutation.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : saveAnswersMutation.isSuccess ? (
-                  <Check className="mr-2 h-4 w-4" />
-                ) : (
-                  <Save className="mr-2 h-4 w-4" />
-                )}
-                {saveAnswersMutation.isPending
-                  ? "Saving..."
-                  : saveAnswersMutation.isSuccess
-                    ? "Saved!"
-                    : "Save Response"}
-              </Button>
-
+              {!path.includes("qa") && (
+                <Button
+                  variant="outline"
+                  onClick={handleSaveResponse}
+                  disabled={
+                    isStreaming ||
+                    !question ||
+                    !response ||
+                    !projectId ||
+                    saveAnswersMutation.isPending
+                  }
+                  className={`font-semibold transition-all hover:-translate-y-0.5 hover:shadow ${
+                    saveAnswersMutation.isPending
+                      ? "border-green-500 text-green-500"
+                      : ""
+                  }`}
+                >
+                  {saveAnswersMutation.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : saveAnswersMutation.isSuccess ? (
+                    <Check className="mr-2 h-4 w-4" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
+                  {saveAnswersMutation.isPending
+                    ? "Saving..."
+                    : saveAnswersMutation.isSuccess
+                      ? "Saved!"
+                      : "Save Response"}
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={handleNewQuestion}
@@ -160,7 +167,9 @@ const CodeReference: React.FC<CodeReferenceProps> = ({
         {/* Content */}
         <div className="flex h-[calc(95vh-140px)] gap-4 px-6 py-4">
           {/* Main Content - Question and Response */}
-          <div className={`flex flex-col gap-4 overflow-y-auto ${showCodeViewer ? 'w-1/2' : 'w-full'} transition-all duration-300`}>
+          <div
+            className={`flex flex-col gap-4 overflow-y-auto ${showCodeViewer ? "w-1/2" : "w-full"} transition-all duration-300`}
+          >
             {/* Question Display */}
             <div className="bg-muted/20 border-muted/30 hover:border-muted-foreground/30 rounded-xl border p-4 shadow-sm transition-all hover:shadow-md">
               <p className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-wider uppercase">
@@ -170,14 +179,14 @@ const CodeReference: React.FC<CodeReferenceProps> = ({
                 {question}
               </p>
             </div>
-            
+
             {/* Response Area */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 h-96 mb-10">
               <div className="bg-background border-muted/30 rounded-xl border p-4 shadow-sm transition-all hover:shadow-md">
                 <p className="text-muted-foreground mb-2.5 text-xs font-semibold tracking-wider uppercase">
                   Response
                 </p>
-                <div className="prose prose-sm max-w-none">
+                <div className="prose prose-sm max-w-none h-96 overflow-y-auto rounded-xl border p-4 shadow-sm transition-all hover:shadow-md">
                   {isStreaming && !response && (
                     <div className="text-muted-foreground flex animate-pulse items-center gap-3">
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -186,12 +195,54 @@ const CodeReference: React.FC<CodeReferenceProps> = ({
                   )}
                   {response && (
                     <div
-                      className="animate-fade-in text-sm leading-relaxed whitespace-pre-wrap"
+                      className="animate-fade-in text-sm leading-relaxed"
                       style={{ wordBreak: "break-word" }}
-                      dangerouslySetInnerHTML={{
-                        __html: response.replace(/\n/g, "<br/>"),
-                      }}
-                    />
+                    >
+                      {/* Render markdown/README style content */}
+                      <div
+                        className="prose prose-sm max-w-none prose-headings:font-bold prose-headings:text-primary prose-code:bg-muted/40 prose-code:rounded prose-code:px-1 prose-code:py-0.5 prose-code:text-[0.95em] prose-pre:bg-muted/30 prose-pre:rounded-lg prose-pre:p-3 prose-a:text-primary/80 prose-a:underline hover:prose-a:text-primary prose-li:marker:text-primary"
+                        // If you use a markdown renderer, replace this with the renderer
+                        dangerouslySetInnerHTML={{
+                          __html: response
+                            // Convert markdown-style code blocks to HTML
+                            .replace(/```([\s\S]*?)```/g, (match, p1) => {
+                              // Try to detect language
+                              const langMatch = p1.match(/^(\w+)\n/);
+                              let code = p1;
+                              let lang = "";
+                              if (langMatch) {
+                                lang = langMatch[1];
+                                code = p1.replace(/^(\w+)\n/, "");
+                              }
+                              return `<pre class="language-${lang}"><code>${code.replace(
+                                /</g,
+                                "&lt;"
+                              ).replace(/>/g, "&gt;")}</code></pre>`;
+                            })
+                            // Inline code
+                            .replace(/`([^`]+)`/g, '<code>$1</code>')
+                            // Headings
+                            .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                            .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                            .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                            // Bold
+                            .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+                            // Italic
+                            .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+                            // Links
+                            .replace(
+                              /\[([^\]]+)\]\(([^)]+)\)/gim,
+                              '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
+                            )
+                            // Lists
+                            .replace(/^\s*[-*] (.*)$/gim, '<li>$1</li>')
+                            // Paragraphs
+                            .replace(/^\s*([^\n<][^\n]*)$/gim, '<p>$1</p>')
+                            // Line breaks
+                            .replace(/\n/g, "")
+                        }}
+                      />
+                    </div>
                   )}
                 </div>
               </div>
@@ -203,7 +254,12 @@ const CodeReference: React.FC<CodeReferenceProps> = ({
                 <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="bg-primary/10 text-primary mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full">
-                      <svg width="16" height="16" fill="none" viewBox="0 0 16 16">
+                      <svg
+                        width="16"
+                        height="16"
+                        fill="none"
+                        viewBox="0 0 16 16"
+                      >
                         <path
                           d="M8 1.5l2.09 4.24 4.66.68-3.38 3.29.8 4.65L8 11.77l-4.17 2.19.8-4.65-3.38-3.29 4.66-.68L8 1.5z"
                           stroke="currentColor"
@@ -253,9 +309,11 @@ const CodeReference: React.FC<CodeReferenceProps> = ({
                     <div
                       key={index}
                       className={`group bg-background border-muted/20 hover:border-primary/40 cursor-pointer rounded-xl border p-4 text-xs shadow-sm transition-all hover:shadow-md ${
-                        showCodeViewer ? 'opacity-60 hover:opacity-100' : ''
+                        showCodeViewer ? "opacity-60 hover:opacity-100" : ""
                       } ${
-                        selectedFileIndex === index ? 'border-primary/60 bg-primary/5' : ''
+                        selectedFileIndex === index
+                          ? "border-primary/60 bg-primary/5"
+                          : ""
                       }`}
                       onClick={() => handleFileClick(index)}
                     >
@@ -291,8 +349,8 @@ const CodeReference: React.FC<CodeReferenceProps> = ({
           {/* Code Viewer Side Panel */}
           {showCodeViewer && fileReferences?.length > 0 && (
             <div className="w-1/2 overflow-y-auto">
-              <CodeViewer 
-                files={getFilesToShow()} 
+              <CodeViewer
+                files={getFilesToShow()}
                 onClose={closeCodeViewer}
                 initialFileIndex={selectedFileIndex !== null ? 0 : undefined}
               />

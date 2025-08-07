@@ -164,7 +164,7 @@ const AppSidebar = () => {
         </div>
 
        
-
+   
         {/* Sidebar Content */}
         <nav className="flex flex-1 flex-col overflow-y-auto px-2 py-2 sm:py-4">
           {/* Application Group */}

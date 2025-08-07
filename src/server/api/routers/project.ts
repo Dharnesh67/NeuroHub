@@ -363,7 +363,7 @@ export const projectRouter = createTRPCRouter({
         }
 
         // Save the question and answer in the database
-        const savedQuestion = await ctx.db.Question.create({
+        const savedQuestion = await ctx.db.question.create({
           data: {
             question: input.question,
             answer: input.answer,
