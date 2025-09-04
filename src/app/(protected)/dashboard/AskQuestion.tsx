@@ -74,7 +74,7 @@ const AskQuestion = () => {
   };
 
   return (
-    <div className="bg-card border-muted-foreground flex  flex-col rounded-2xl border p-6 shadow-lg transition-all hover:shadow-xl">
+    <div className="bg-card border-muted-foreground flex flex-col rounded-2xl border p-6 shadow-lg transition-all hover:shadow-xl">
       <CodeReference
         open={open}
         setOpen={setOpen}
@@ -98,7 +98,7 @@ const AskQuestion = () => {
         className="flex h-full flex-1 flex-col justify-between"
       >
         <textarea
-          className="text-muted-foreground bg-muted/20 border-primary/20 focus:ring-primary/20 mb-4 flex h-full  flex-col items-center justify-center rounded-xl border border-dashed p-6 transition focus:ring-2 focus:outline-none"
+          className="text-muted-foreground bg-muted/20 border-primary/20 focus:ring-primary/20 mb-4 flex h-full flex-col items-center justify-center rounded-xl border border-dashed p-6 transition focus:ring-2 focus:outline-none"
           rows={3}
           placeholder="Have questions about the project?
           Ask your team members anything related to the project and get quick

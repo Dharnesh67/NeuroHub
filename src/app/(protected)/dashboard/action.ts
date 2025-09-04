@@ -24,7 +24,7 @@ export const AskQuestion = async (question: string, projectId: string) => {
       queryEmbedding.length !== 768
     ) {
       throw new Error(
-        `Failed to generate embedding (expected 768 dimensions, got ${Array.isArray(queryEmbedding) ? queryEmbedding.length : "invalid"})`
+        `Failed to generate embedding (expected 768 dimensions, got ${Array.isArray(queryEmbedding) ? queryEmbedding.length : "invalid"})`,
       );
     }
 
@@ -45,7 +45,7 @@ export const AskQuestion = async (question: string, projectId: string) => {
       LIMIT 5;
       `,
       embeddingLiteral,
-      projectId
+      projectId,
     );
 
     const StructuredResults = results as Array<{
@@ -99,7 +99,7 @@ export const AskQuestion = async (question: string, projectId: string) => {
           for await (const chunk of result.textStream) {
             controller.enqueue(new TextEncoder().encode(chunk));
           }
-          
+
           controller.close();
         } catch (error) {
           controller.error(error);

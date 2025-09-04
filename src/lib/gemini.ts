@@ -1,7 +1,7 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { CommitDetail } from "./github";
 import { Document } from "langchain/document";
+import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 
 const Key = process.env.GEMINI_API_KEY;
 const genAi = new GoogleGenerativeAI(Key || "");
@@ -145,6 +145,7 @@ export async function generateEmbedding(summary: string) {
       console.warn("Empty summary provided for embedding generation");
       return [];
     }
+    // const genAi = new GoogleGenerativeAI(Key || "");
 
     const model = genAi.getGenerativeModel({ model: "embedding-001" });
     const result = await model.embedContent(summary.slice(0, 5000));
@@ -165,17 +166,79 @@ export async function summariseCode(doc: Document) {
       return "";
     }
 
-    console.log("getting summary for", doc.metadata.source);
-    const code = doc?.pageContent?.slice(0, 5000) || ""; // Limit to 10000 characters
+    const source = doc.metadata.source;
+    console.log("getting summary for", source);
+    const code = doc?.pageContent || "";
 
     if (!code.trim()) {
       console.warn("Empty or no content found in document");
       return "";
     }
 
-    const prompt = `
+    // Create a text splitter for code files
+    const textSplitter = new RecursiveCharacterTextSplitter({
+      chunkSize: 2000,
+      chunkOverlap: 200,
+      separators: ["\n\n", "\n", " ", ""],
+    });
+
+    // Split the code into chunks
+    const chunks = await textSplitter.splitText(code);
+    console.log(`Split code into ${chunks.length} chunks`);
+
+    // If only one chunk, process normally
+    if (chunks.length === 1) {
+      return await processCodeChunk(chunks[0], source, MAX_RETRIES, RETRY_DELAY);
+    }
+
+    // Process each chunk and collect summaries
+    const chunkSummaries = [];
+    for (let i = 0; i < chunks.length; i++) {
+      const chunkSummary = await processCodeChunk(
+        chunks[i], 
+        source, 
+        MAX_RETRIES, 
+        RETRY_DELAY,
+        i + 1,
+        chunks.length
+      );
+      if (chunkSummary) {
+        chunkSummaries.push(chunkSummary);
+      }
+    }
+
+    // If no summaries were generated, return empty
+    if (chunkSummaries.length === 0) {
+      return "";
+    }
+
+    // If only one summary, return it directly
+    if (chunkSummaries.length === 1) {
+      return chunkSummaries[0];
+    }
+
+    // Combine multiple summaries into a final summary
+    return await combineSummaries(chunkSummaries, source, MAX_RETRIES, RETRY_DELAY);
+
+  } catch (error) {
+    console.error("Error in summariseCode:", error);
+    return "";
+  }
+}
+
+async function processCodeChunk(
+  code: string, 
+  source: string, 
+  maxRetries: number, 
+  retryDelay: number,
+  chunkNumber?: number,
+  totalChunks?: number
+): Promise<string> {
+  const chunkInfo = chunkNumber && totalChunks ? ` (Part ${chunkNumber}/${totalChunks})` : "";
+  
+  const prompt = `
 You are an intelligent senior software engineer who specialises in onboarding junior software engineers onto projects.
-You are onboarding a junior software engineer and explaining to them the purpose of the ${doc.metadata.source} file.
+You are onboarding a junior software engineer and explaining to them the purpose of the ${source} file${chunkInfo}.
 Here is the code:
 --
 ${code}
@@ -183,54 +246,109 @@ ${code}
 [ ] Give a summary no more than 100 words of the code above.
     `;
 
-    let lastError: any = null;
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        const response = await model.generateContent([prompt]);
-        const text = response?.response?.text?.() || "";
-        if (!text.trim()) {
-          throw new Error("Empty summary returned");
-        }
-        return text;
-      } catch (error: any) {
-        lastError = error;
-        // Check for rate limit (429), service unavailable (503), or retryable error
-        if (
-          error?.status === 429 ||
-          error?.status === 503 ||
-          error?.statusText === "Too Many Requests" ||
-          error?.statusText === "Service Unavailable"
-        ) {
-          const waitTime = RETRY_DELAY * Math.pow(2, attempt - 1);
+  let lastError: any = null;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await model.generateContent([prompt]);
+      const text = response?.response?.text?.() || "";
+      if (!text.trim()) {
+        throw new Error("Empty summary returned");
+      }
+      return text;
+    } catch (error: any) {
+      lastError = error;
+      // Check for rate limit (429), service unavailable (503), or retryable error
+      if (
+        error?.status === 429 ||
+        error?.status === 503 ||
+        error?.statusText === "Too Many Requests" ||
+        error?.statusText === "Service Unavailable"
+      ) {
+        const waitTime = retryDelay * Math.pow(2, attempt - 1);
+        console.warn(
+          `Rate limited by Gemini API. Retrying in ${waitTime}ms (attempt ${attempt})...`,
+        );
+        await new Promise((res) => setTimeout(res, waitTime));
+      } else {
+        // For other errors, only retry if not the last attempt
+        if (attempt < maxRetries) {
+          const waitTime = retryDelay * Math.pow(2, attempt - 1);
           console.warn(
-            `Rate limited by Gemini API. Retrying in ${waitTime}ms (attempt ${attempt})...`,
+            `Error in processCodeChunk, retrying in ${waitTime}ms (attempt ${attempt})...`,
+            error,
           );
           await new Promise((res) => setTimeout(res, waitTime));
         } else {
-          // For other errors, only retry if not the last attempt
-          if (attempt < MAX_RETRIES) {
-            const waitTime = RETRY_DELAY * Math.pow(2, attempt - 1);
-            console.warn(
-              `Error in summariseCode, retrying in ${waitTime}ms (attempt ${attempt})...`,
-              error,
-            );
-            await new Promise((res) => setTimeout(res, waitTime));
-          } else {
-            break;
-          }
+          break;
         }
       }
     }
-    // All retries failed
-    console.error("All attempts failed in summariseCode:", lastError);
-    return "";
-  } catch (error) {
-    console.error("Error in summariseCode:", error);
-    return "";
   }
+  // All retries failed
+  console.error("All attempts failed in processCodeChunk:", lastError);
+  return "";
 }
 
+async function combineSummaries(
+  summaries: string[], 
+  source: string, 
+  maxRetries: number, 
+  retryDelay: number
+): Promise<string> {
+  const combinedSummaries = summaries.join("\n\n");
+  
+  const prompt = `
+You are an intelligent senior software engineer. You have been given multiple summaries of different parts of the ${source} file.
+Please combine these summaries into a single, coherent summary that explains the overall purpose and functionality of the file.
 
+Individual summaries:
+${combinedSummaries}
+
+[ ] Provide a unified summary no more than 150 words that explains the overall purpose and functionality of the ${source} file.
+    `;
+
+  let lastError: any = null;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await model.generateContent([prompt]);
+      const text = response?.response?.text?.() || "";
+      if (!text.trim()) {
+        throw new Error("Empty summary returned");
+      }
+      return text;
+    } catch (error: any) {
+      lastError = error;
+      // Check for rate limit (429), service unavailable (503), or retryable error
+      if (
+        error?.status === 429 ||
+        error?.status === 503 ||
+        error?.statusText === "Too Many Requests" ||
+        error?.statusText === "Service Unavailable"
+      ) {
+        const waitTime = retryDelay * Math.pow(2, attempt - 1);
+        console.warn(
+          `Rate limited by Gemini API. Retrying in ${waitTime}ms (attempt ${attempt})...`,
+        );
+        await new Promise((res) => setTimeout(res, waitTime));
+      } else {
+        // For other errors, only retry if not the last attempt
+        if (attempt < maxRetries) {
+          const waitTime = retryDelay * Math.pow(2, attempt - 1);
+          console.warn(
+            `Error in combineSummaries, retrying in ${waitTime}ms (attempt ${attempt})...`,
+            error,
+          );
+          await new Promise((res) => setTimeout(res, waitTime));
+        } else {
+          break;
+        }
+      }
+    }
+  }
+  // All retries failed
+  console.error("All attempts failed in combineSummaries:", lastError);
+  return summaries.join(" ");
+}
 
 // const { text } = await generateText({
 //   model: google('gemini-1.5-pro-latest'),

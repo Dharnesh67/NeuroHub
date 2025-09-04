@@ -1,5 +1,6 @@
 import { GithubRepoLoader } from "@langchain/community/document_loaders/web/github";
 import { Document } from "@langchain/core/documents";
+import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { generateEmbedding, summariseCode } from "./gemini";
 import { db } from "@/server/db";
 
@@ -92,13 +93,52 @@ const getEmbeddings = async (docs: Document[], projectId: string) => {
       console.log(
         `Processing document ${i + 1}/${docs.length}: ${fileName}`,
       );
-      summary = await summariseCode(doc);
+      
+      // Create a text splitter for large files
+      const textSplitter = new RecursiveCharacterTextSplitter({
+        chunkSize: 1500,
+        chunkOverlap: 150,
+        separators: ["\n\n", "\n", " ", ""],
+      });
+
+      // Split the document content into chunks
+      const chunks = await textSplitter.splitText(doc.pageContent);
+      console.log(`Split ${fileName} into ${chunks.length} chunks`);
+
+      // If only one chunk, process normally
+      if (chunks.length === 1) {
+        const singleSummary = await summariseCode(doc);
+        summary = singleSummary || `File: ${fileName}\n• Code summary unavailable.`;
+      } else {
+        // Process each chunk and collect summaries
+        const chunkSummaries = [];
+        for (let j = 0; j < chunks.length; j++) {
+          const chunkDoc = new Document({
+            pageContent: chunks[j],
+            metadata: { ...doc.metadata, chunkIndex: j, totalChunks: chunks.length }
+          });
+          
+          const chunkSummary = await summariseCode(chunkDoc);
+          if (chunkSummary) {
+            chunkSummaries.push(chunkSummary);
+          }
+        }
+
+        // Combine multiple summaries into a final summary
+        if (chunkSummaries.length > 0) {
+          const combinedSummary = await combineChunkSummaries(chunkSummaries, fileName);
+          summary = combinedSummary || `File: ${fileName}\n• Code summary unavailable.`;
+        } else {
+          summary = `File: ${fileName}\n• Code summary unavailable.`;
+        }
+      }
     } catch (error) {
       console.error(`Error generating summary for document ${i + 1}:`, error);
       summary = `File: ${fileName}\n• Code summary unavailable (summary error).`;
     }
 
     try {
+      // Generate embedding for the combined summary
       embedding = await generateEmbedding(summary);
     } catch (error) {
       console.error(`Error generating embedding for document ${i + 1}:`, error);
@@ -121,6 +161,28 @@ const getEmbeddings = async (docs: Document[], projectId: string) => {
   }
 
   return results;
+};
+
+// Helper function to combine multiple chunk summaries
+const combineChunkSummaries = async (summaries: string[], fileName: string): Promise<string> => {
+  try {
+    // Use a simple approach to combine summaries
+    // For now, we'll join them with a separator, but you could use AI to combine them
+    if (summaries.length === 1) {
+      return summaries[0];
+    }
+    
+    // Create a combined summary that includes all parts
+    const combinedSummary = `File: ${fileName}\n\nThis file contains multiple sections:\n\n${summaries.map((summary, index) => 
+      `Section ${index + 1}:\n${summary}`
+    ).join('\n\n')}`;
+    
+    return combinedSummary;
+  } catch (error) {
+    console.error("Error combining chunk summaries:", error);
+    // Fallback to joining summaries
+    return summaries.join("\n\n") || `File: ${fileName}\n• Code summary unavailable.`;
+  }
 };
 
 export const indexGithubRepo = async (
